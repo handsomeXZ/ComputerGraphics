@@ -29,7 +29,7 @@ void drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2, SDL_Surf
 
 
 
-int main(int argc, char* argv[])
+int main2(int argc, char* argv[])
 {
 	SDL_Init(SDL_INIT_VIDEO);
 

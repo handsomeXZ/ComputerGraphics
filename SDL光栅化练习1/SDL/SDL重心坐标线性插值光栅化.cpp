@@ -37,7 +37,7 @@ typedef struct BarycentricCoordinates
 void drawTriangle2(const Vertex& v0, const Vertex& v1, const Vertex& v2, SDL_Surface* m_surface, SDL_Window* m_window);
 
 
-int main2(int argc, char* argv[])
+int main(int argc, char* argv[])
 {
 	SDL_Init(SDL_INIT_VIDEO);
 
