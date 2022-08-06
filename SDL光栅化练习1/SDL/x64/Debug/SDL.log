@@ -1,0 +1,61 @@
+﻿  Pixel.cpp
+  SDL边缘方程线性插值光栅化.cpp
+C:\Users\10663\source\repos\计算机图形学学习\SDL光栅化练习1\SDL\SDL边缘方程线性插值光栅化.cpp(27,2): warning C4091: “typedef ”: 没有声明变量时忽略“Vertex”的左侧
+C:\Users\10663\source\repos\计算机图形学学习\SDL光栅化练习1\SDL\SDL边缘方程线性插值光栅化.cpp(93,2): warning C4091: “typedef ”: 没有声明变量时忽略“EdgeEquation”的左侧
+C:\Users\10663\source\repos\计算机图形学学习\SDL光栅化练习1\SDL\SDL边缘方程线性插值光栅化.cpp(121,2): warning C4091: “typedef ”: 没有声明变量时忽略“ParameterEquation”的左侧
+C:\Users\10663\source\repos\计算机图形学学习\SDL光栅化练习1\SDL\SDL边缘方程线性插值光栅化.cpp(125,11): warning C4244: “初始化”: 从“const _Ty”转换到“int”，可能丢失数据
+          with
+          [
+              _Ty=float
+          ]
+C:\Users\10663\source\repos\计算机图形学学习\SDL光栅化练习1\SDL\SDL边缘方程线性插值光栅化.cpp(126,11): warning C4244: “初始化”: 从“const _Ty”转换到“int”，可能丢失数据
+          with
+          [
+              _Ty=float
+          ]
+C:\Users\10663\source\repos\计算机图形学学习\SDL光栅化练习1\SDL\SDL边缘方程线性插值光栅化.cpp(127,11): warning C4244: “初始化”: 从“const _Ty”转换到“int”，可能丢失数据
+          with
+          [
+              _Ty=float
+          ]
+C:\Users\10663\source\repos\计算机图形学学习\SDL光栅化练习1\SDL\SDL边缘方程线性插值光栅化.cpp(128,11): warning C4244: “初始化”: 从“const _Ty”转换到“int”，可能丢失数据
+          with
+          [
+              _Ty=float
+          ]
+C:\Users\10663\source\repos\计算机图形学学习\SDL光栅化练习1\SDL\SDL边缘方程线性插值光栅化.cpp(141,13): warning C4244: “初始化”: 从“double”转换到“float”，可能丢失数据
+C:\Users\10663\source\repos\计算机图形学学习\SDL光栅化练习1\SDL\SDL边缘方程线性插值光栅化.cpp(161,14): warning C4244: “初始化”: 从“float”转换到“int”，可能丢失数据
+C:\Users\10663\source\repos\计算机图形学学习\SDL光栅化练习1\SDL\SDL边缘方程线性插值光栅化.cpp(162,14): warning C4244: “初始化”: 从“float”转换到“int”，可能丢失数据
+C:\Users\10663\source\repos\计算机图形学学习\SDL光栅化练习1\SDL\SDL边缘方程线性插值光栅化.cpp(163,14): warning C4244: “初始化”: 从“float”转换到“int”，可能丢失数据
+C:\Users\10663\source\repos\计算机图形学学习\SDL光栅化练习1\SDL\SDL边缘方程线性插值光栅化.cpp(166,35): warning C4244: “参数”: 从“float”转换到“int”，可能丢失数据
+C:\Users\10663\source\repos\计算机图形学学习\SDL光栅化练习1\SDL\SDL边缘方程线性插值光栅化.cpp(166,32): warning C4244: “参数”: 从“float”转换到“int”，可能丢失数据
+  SDL重心坐标线性插值光栅化.cpp
+C:\Users\10663\source\repos\计算机图形学学习\SDL光栅化练习1\SDL\SDL重心坐标线性插值光栅化.cpp(24,2): warning C4091: “typedef ”: 没有声明变量时忽略“Vertex”的左侧
+C:\Users\10663\source\repos\计算机图形学学习\SDL光栅化练习1\SDL\SDL重心坐标线性插值光栅化.cpp(35,2): warning C4091: “typedef ”: 没有声明变量时忽略“BarycentricCoordinates”的左侧
+C:\Users\10663\source\repos\计算机图形学学习\SDL光栅化练习1\SDL\SDL重心坐标线性插值光栅化.cpp(72,11): warning C4244: “初始化”: 从“const _Ty”转换到“int”，可能丢失数据
+          with
+          [
+              _Ty=float
+          ]
+C:\Users\10663\source\repos\计算机图形学学习\SDL光栅化练习1\SDL\SDL重心坐标线性插值光栅化.cpp(73,11): warning C4244: “初始化”: 从“const _Ty”转换到“int”，可能丢失数据
+          with
+          [
+              _Ty=float
+          ]
+C:\Users\10663\source\repos\计算机图形学学习\SDL光栅化练习1\SDL\SDL重心坐标线性插值光栅化.cpp(74,11): warning C4244: “初始化”: 从“const _Ty”转换到“int”，可能丢失数据
+          with
+          [
+              _Ty=float
+          ]
+C:\Users\10663\source\repos\计算机图形学学习\SDL光栅化练习1\SDL\SDL重心坐标线性插值光栅化.cpp(75,11): warning C4244: “初始化”: 从“const _Ty”转换到“int”，可能丢失数据
+          with
+          [
+              _Ty=float
+          ]
+C:\Users\10663\source\repos\计算机图形学学习\SDL光栅化练习1\SDL\SDL重心坐标线性插值光栅化.cpp(89,14): warning C4244: “初始化”: 从“float”转换到“int”，可能丢失数据
+C:\Users\10663\source\repos\计算机图形学学习\SDL光栅化练习1\SDL\SDL重心坐标线性插值光栅化.cpp(90,14): warning C4244: “初始化”: 从“float”转换到“int”，可能丢失数据
+C:\Users\10663\source\repos\计算机图形学学习\SDL光栅化练习1\SDL\SDL重心坐标线性插值光栅化.cpp(91,14): warning C4244: “初始化”: 从“float”转换到“int”，可能丢失数据
+C:\Users\10663\source\repos\计算机图形学学习\SDL光栅化练习1\SDL\SDL重心坐标线性插值光栅化.cpp(94,35): warning C4244: “参数”: 从“float”转换到“int”，可能丢失数据
+C:\Users\10663\source\repos\计算机图形学学习\SDL光栅化练习1\SDL\SDL重心坐标线性插值光栅化.cpp(94,32): warning C4244: “参数”: 从“float”转换到“int”，可能丢失数据
+  正在生成代码...
+  SDL.vcxproj -> C:\Users\10663\source\repos\计算机图形学学习\SDL光栅化练习1\x64\Debug\SDL.exe
