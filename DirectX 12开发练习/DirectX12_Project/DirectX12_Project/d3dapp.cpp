@@ -65,27 +65,107 @@ bool D3DApp::InitMainWindow()
 
 bool D3DApp::InitDirect3D12() {
 
-	ThrowIfFailed(CreateDXGIFactory(IID_PPV_ARGS (&mdxgiFactory)));
+	ThrowIfFailed(CreateDXGIFactory(IID_PPV_ARGS (mdxgiFactory.GetAddressOf())));
 
-	//尝试创建硬件设备
-	HRESULT hresultHardWare = D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&md3dDevice));
+	// 尝试创建硬件设备
+	HRESULT hresultHardWare = D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(md3dDevice.GetAddressOf()));
 	
-	//回退到 Warp 设备
+	// 回退到 Warp 设备
 	if (FAILED(hresultHardWare)) {
 		Microsoft::WRL::ComPtr<IDXGIAdapter> warpAdapter;
-		ThrowIfFailed(mdxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter)));// 只有在 IDXGIFactory4 里才有 EnumWarpAdapter
+		ThrowIfFailed(mdxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(warpAdapter.GetAddressOf())));// 只有在 IDXGIFactory4 里才有 EnumWarpAdapter
 
 		ThrowIfFailed(D3D12CreateDevice(
 			warpAdapter.Get(),
 			D3D_FEATURE_LEVEL_11_0,
-			IID_PPV_ARGS(&md3dDevice)
+			IID_PPV_ARGS(md3dDevice.GetAddressOf())
 		));
 	}
 
-	md3dDevice.fencev 
+	ThrowIfFailed(md3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(mFence.GetAddressOf())));
 
+	// 获取描述符大小
+	mRtvDescriptorSize = md3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	mDsvDescriptorSize = md3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	mCbvUavDescriptorSize = md3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	
+	// 检测用户设备对 4X MSAA 质量级别的支持情况
+	D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS mulsampleQualityLevels;
+	mulsampleQualityLevels.Format = mBackBufferFormat;
+	mulsampleQualityLevels.SampleCount = 4;
+	mulsampleQualityLevels.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE;
+	mulsampleQualityLevels.NumQualityLevels = 0;
+
+	md3dDevice->CheckFeatureSupport(
+		D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, // 多重采样的质量级别
+		&mulsampleQualityLevels,
+		sizeof(mulsampleQualityLevels)
+	);
+	m4xMsaaQualityLevels = mulsampleQualityLevels.NumQualityLevels;
+
+	// 创建命令队列，命令列表，命令分配器
+	D3D12_COMMAND_QUEUE_DESC queuedesc = {};
+	queuedesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT; // 可供GPU直接指向的命令
+	queuedesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+	md3dDevice->CreateCommandQueue(&queuedesc,IID_PPV_ARGS(mCommandQueue.GetAddressOf()));
+
+	md3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(mCommandAllocator.GetAddressOf()));
+	md3dDevice->CreateCommandList(0,D3D12_COMMAND_LIST_TYPE_DIRECT, mCommandAllocator.Get(), nullptr, IID_PPV_ARGS(mCommandList.GetAddressOf()));
+
+	CreateSwapChain();
+
+	// 创建应用程序所需的描述符堆
+		// 创建交换链所需的2个RenderTargetView
+	D3D12_DESCRIPTOR_HEAP_DESC mRtvdesc = {};
+	mRtvdesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+	mRtvdesc.NumDescriptors = SwapChainBufferCount;
+	mRtvdesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	mRtvdesc.NodeMask = 0;
+
+	md3dDevice->CreateDescriptorHeap(&mRtvdesc, IID_PPV_ARGS(mRtvHeap.GetAddressOf()));
+		// 创建1个Depth/StencilView
+	D3D12_DESCRIPTOR_HEAP_DESC mDsvdesc = {};
+	mDsvdesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+	mDsvdesc.NumDescriptors = 1;
+	mDsvdesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	mDsvdesc.NodeMask = 0;
+
+	md3dDevice->CreateDescriptorHeap(&mDsvdesc, IID_PPV_ARGS(mDsvHeap.GetAddressOf()));
+
+
+
+	return true;
+}
+
+bool D3DApp::CreateSwapChain() {
+	// 创建交换链
+	DXGI_SWAP_CHAIN_DESC swapChaindesc = {};
+	swapChaindesc.BufferDesc.Width = mClientWidth;
+	swapChaindesc.BufferDesc.Height = mClientHeight;
+	swapChaindesc.BufferDesc.Format = mBackBufferFormat;
+	swapChaindesc.BufferDesc.RefreshRate.Numerator = 60;
+	swapChaindesc.BufferDesc.RefreshRate.Denominator = 1;
+	swapChaindesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED; // 扫描线顺序未指定
+	swapChaindesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
+	swapChaindesc.SampleDesc.Count = 1;
+	swapChaindesc.SampleDesc.Quality = m4xMsaaQualityLevels;
+	swapChaindesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	swapChaindesc.BufferCount = SwapChainBufferCount;
+	swapChaindesc.OutputWindow = mhMainWnd;
+	swapChaindesc.Windowed = true;
+	swapChaindesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+	swapChaindesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+
+	mdxgiFactory->CreateSwapChain(mCommandQueue.Get(), &swapChaindesc, mSwapChain.GetAddressOf());
 
 }
+
+D3D12_CPU_DESCRIPTOR_HANDLE D3DApp::CurrentBackBufferView() {
+	return CD3D12_();
+}
+
+
+
 
 LRESULT D3DApp::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
