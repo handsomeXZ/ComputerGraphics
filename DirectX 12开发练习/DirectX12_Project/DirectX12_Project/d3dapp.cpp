@@ -118,7 +118,7 @@ bool D3DApp::InitDirect3D12() {
 		// 创建交换链所需的2个RenderTargetView
 	D3D12_DESCRIPTOR_HEAP_DESC mRtvdesc = {};
 	mRtvdesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-	mRtvdesc.NumDescriptors = SwapChainBufferCount;
+	mRtvdesc.NumDescriptors = mSwapChainBufferCount;
 	mRtvdesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	mRtvdesc.NodeMask = 0;
 
@@ -137,7 +137,7 @@ bool D3DApp::InitDirect3D12() {
 	return true;
 }
 
-bool D3DApp::CreateSwapChain() {
+void D3DApp::CreateSwapChain() {
 	// 创建交换链
 	DXGI_SWAP_CHAIN_DESC swapChaindesc = {};
 	swapChaindesc.BufferDesc.Width = mClientWidth;
@@ -147,10 +147,10 @@ bool D3DApp::CreateSwapChain() {
 	swapChaindesc.BufferDesc.RefreshRate.Denominator = 1;
 	swapChaindesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED; // 扫描线顺序未指定
 	swapChaindesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
-	swapChaindesc.SampleDesc.Count = 1;
-	swapChaindesc.SampleDesc.Quality = m4xMsaaQualityLevels;
+	swapChaindesc.SampleDesc.Count = m4xMsaaState ? 4 : 1;
+	swapChaindesc.SampleDesc.Quality = m4xMsaaState ? (m4xMsaaQualityLevels - 1) : 0;
 	swapChaindesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	swapChaindesc.BufferCount = SwapChainBufferCount;
+	swapChaindesc.BufferCount = mSwapChainBufferCount;
 	swapChaindesc.OutputWindow = mhMainWnd;
 	swapChaindesc.Windowed = true;
 	swapChaindesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
@@ -161,11 +161,108 @@ bool D3DApp::CreateSwapChain() {
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE D3DApp::CurrentBackBufferView() {
-	return CD3D12_();
+	D3D12_CPU_DESCRIPTOR_HANDLE nextBackBuffer;
+	nextBackBuffer.ptr = mRtvHeap->GetCPUDescriptorHandleForHeapStart().ptr + mCurrentBuffer * mRtvDescriptorSize;
+	return nextBackBuffer;
 }
 
+D3D12_CPU_DESCRIPTOR_HANDLE D3DApp::DepthStencilView() {
+	return mDsvHeap->GetCPUDescriptorHandleForHeapStart();
+}
+
+void D3DApp::FlushCommandQueue() {
+	assert(mFence);
+	assert(mCommandQueue);
+
+	mCurrentFence++;
+
+	mCommandQueue->Signal(mFence.Get(), mCurrentFence);
+	while (mFence->GetCompletedValue() < mCurrentFence) {
+		HANDLE eventHandle = CreateEventEx(nullptr, false, false, EVENT_ALL_ACCESS);
+
+		mFence->SetEventOnCompletion(mCurrentFence, eventHandle);
+
+		WaitForSingleObject(eventHandle, INFINITE);
+		CloseHandle(eventHandle);
+	}
+
+}
+
+void D3DApp::Onresize() {
+	// 等待命令队列执行完毕
+	FlushCommandQueue();
+
+	mCommandList->Reset(mCommandAllocator.Get(), nullptr);
+
+	// 释放缓冲区
+	for (UINT i = 0; i < mSwapChainBufferCount; i++) {
+		mBackBuffers[mSwapChainBufferCount].Reset();
+	}
+	mDepthStencilBuffer.Reset();
 
 
+	mSwapChain->ResizeBuffers(
+		mSwapChainBufferCount,
+		mClientWidth,
+		mClientHeight,
+		mBackBufferFormat,
+		DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH
+	);
+	
+
+	// 重新创建RenderTargetView
+	D3D12_CPU_DESCRIPTOR_HANDLE mRtvViewFirstHandle;
+	mRtvViewFirstHandle = mRtvHeap->GetCPUDescriptorHandleForHeapStart();
+	for (UINT i = 0; i < mSwapChainBufferCount; i++)
+	{
+		mSwapChain->GetBuffer(i, IID_PPV_ARGS(mBackBuffers[i].GetAddressOf()));
+
+		md3dDevice->CreateRenderTargetView(mBackBuffers[i].Get(), nullptr, mRtvViewFirstHandle);
+
+		mRtvViewFirstHandle.ptr = mRtvViewFirstHandle.ptr + mRtvDescriptorSize;
+	}
+
+	// 重新创建DepthStencilView
+	D3D12_HEAP_PROPERTIES pDSHeapProperties = {};
+	pDSHeapProperties.Type = D3D12_HEAP_TYPE_DEFAULT; // 深度模板缓冲区只需要GPU读写
+
+	D3D12_RESOURCE_DESC pDSResouceDesc = {};
+	pDSResouceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	pDSResouceDesc.Width = mClientWidth;
+	pDSResouceDesc.Height = mClientHeight;
+	pDSResouceDesc.DepthOrArraySize = 1;
+	pDSResouceDesc.MipLevels = 1;
+	pDSResouceDesc.Format = mDepthStencilFormat;
+	pDSResouceDesc.SampleDesc.Count = m4xMsaaState ? 4 : 1;
+	pDSResouceDesc.SampleDesc.Quality = m4xMsaaState ? (m4xMsaaQualityLevels - 1) : 0;
+	pDSResouceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	pDSResouceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+	D3D12_CLEAR_VALUE opClear = {};
+	opClear.Format = mDepthStencilFormat;
+	opClear.DepthStencil.Depth = 1.0f;
+	opClear.DepthStencil.Stencil = 0;
+
+	md3dDevice->CreateCommittedResource(
+		&pDSHeapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&pDSResouceDesc,
+		D3D12_RESOURCE_STATE_COMMON,
+		&opClear,
+		IID_PPV_ARGS(mDepthStencilBuffer.GetAddressOf())
+	);
+
+	md3dDevice->CreateDepthStencilView(mDepthStencilBuffer.Get(), nullptr, DepthStencilView());
+
+	// 将资源从初始状转换为深度缓冲区
+	D3D12_RESOURCE_BARRIER pbarrier = {};
+	
+	mCommandList->ResourceBarrier(
+		1,
+		
+	)
+
+}
 
 LRESULT D3DApp::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
