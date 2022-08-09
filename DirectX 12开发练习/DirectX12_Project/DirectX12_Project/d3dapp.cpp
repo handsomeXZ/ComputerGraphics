@@ -1,5 +1,5 @@
 #include "d3dapp.h"
-
+#include "WindowsX.h"
 
 using namespace std;
 

@@ -24,8 +24,10 @@ public:
 			IID_PPV_ARGS(mUploadBuffer.GetAddressOf())
 		);
 
-		mUploadBuffer->Map(0, nullptr, reinterpret_cast<void**>(&mMappedData))
+		mUploadBuffer->Map(0, nullptr, reinterpret_cast<void**>(&mMappedData));
 	};
+	UploadBuffer(const UploadBuffer& rhs) = delete;
+    UploadBuffer& operator=(const UploadBuffer& rhs) = delete;
 	~UploadBuffer() {
 		if (mMappedData != nullptr) {
 			mUploadBuffer->Unmap(0, nullptr);

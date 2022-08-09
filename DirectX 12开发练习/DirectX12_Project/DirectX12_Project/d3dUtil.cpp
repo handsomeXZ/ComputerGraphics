@@ -67,7 +67,18 @@ Microsoft::WRL::ComPtr<ID3D12Resource> d3dUtil::CreateDefaultBuffer(
 
     return pdefualtBuffer;
 }
+Microsoft::WRL::ComPtr<ID3DBlob> d3dUtil::CompileShader(const std::wstring& filename,
+    const D3D_SHADER_MACRO* defines, const std::string& entrypoint, const std::string& target)
+{
+    UINT compileFlags = 0;
+    Microsoft::WRL::ComPtr<ID3DBlob> byteCode = nullptr;
+    Microsoft::WRL::ComPtr<ID3DBlob> errors;
+    HRESULT hr = D3DCompileFromFile(filename.c_str(), defines, D3D_COMPILE_STANDARD_FILE_INCLUDE, entrypoint.c_str(),
+        target.c_str(), compileFlags, 0, &byteCode, &errors);
 
+    ThrowIfFailed(hr);
+    return byteCode;
+}
 
 DxException::DxException(HRESULT hr, const std::wstring& functionName, const std::wstring& filename, int lineNumber) :
     ErrorCode(hr),

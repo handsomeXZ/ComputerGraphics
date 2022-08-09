@@ -45,5 +45,10 @@ private:
     std::unique_ptr<UploadBuffer<ObjectConstants>> ObjectCBuffer = nullptr;
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mCbvHeap = nullptr;
     Microsoft::WRL::ComPtr<ID3D12RootSignature> mRootSignature = nullptr;
+
+    std::vector<D3D12_INPUT_ELEMENT_DESC> mInputLayout;
+    Microsoft::WRL::ComPtr<ID3DBlob> mvsByteCode = nullptr;
+    Microsoft::WRL::ComPtr<ID3DBlob> mpsByteCode = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> mPSO = nullptr;
 };
 

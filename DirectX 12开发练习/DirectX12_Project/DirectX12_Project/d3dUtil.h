@@ -11,6 +11,8 @@
 #include "MathHelper.h"
 #include "memory"
 #include "d3dx12.h"
+#include "d3dcompiler.h"
+#include "vector"
 
 inline std::wstring AnsiToWString(const std::string& str)
 {
@@ -45,6 +47,11 @@ public:
         // 512
         return (byteSize + 255) & ~255;
     }
+
+    static Microsoft::WRL::ComPtr<ID3DBlob> CompileShader(const std::wstring& filename,
+        const D3D_SHADER_MACRO* defines, const std::string& entrypoint, const std::string& target);
+
+
 };
 
 class DxException
