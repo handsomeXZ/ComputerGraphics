@@ -23,6 +23,44 @@ D3DApp::D3DApp(HINSTANCE hInstance)
     mApp = this;
 }
 
+int D3DApp::Run() {
+	MSG msg = { 0 };
+
+	while (msg.message != WM_QUIT) {
+		if (PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
+		{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+		// Otherwise, do animation/game stuff.
+		else 
+		{
+			if (!mAppPaused) {
+				Update();
+				Draw();
+			}
+			else
+			{
+				Sleep(100);
+			}
+		}
+	}
+	return (int)msg.wParam;
+}
+bool D3DApp::Initialize()
+{
+	if (!InitMainWindow())
+		return false;
+
+	if (!InitDirect3D12())
+		return false;
+
+	// Do the initial resize code.
+	OnResize();
+
+	return true;
+}
+
 bool D3DApp::InitMainWindow()
 {
 	WNDCLASS wc;
@@ -188,7 +226,7 @@ void D3DApp::FlushCommandQueue() {
 
 }
 
-void D3DApp::Onresize() {
+void D3DApp::OnResize() {
 	// 等待命令队列执行完毕
 	FlushCommandQueue();
 
@@ -222,7 +260,7 @@ void D3DApp::Onresize() {
 		mRtvViewFirstHandle.ptr = mRtvViewFirstHandle.ptr + mRtvDescriptorSize;
 	}
 
-	// 重新创建DepthStencilView
+	// 重新创建 DepthStencilBuffer 和 DepthStencilView
 	D3D12_HEAP_PROPERTIES pDSHeapProperties = {};
 	pDSHeapProperties.Type = D3D12_HEAP_TYPE_DEFAULT; // 深度模板缓冲区只需要GPU读写
 
@@ -254,13 +292,34 @@ void D3DApp::Onresize() {
 
 	md3dDevice->CreateDepthStencilView(mDepthStencilBuffer.Get(), nullptr, DepthStencilView());
 
-	// 将资源从初始状转换为深度缓冲区
+	// 将缓冲区资源从初始状转换为深度缓冲区
 	D3D12_RESOURCE_BARRIER pbarrier = {};
-	
+	pbarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	pbarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+	pbarrier.Transition.pResource = mDepthStencilBuffer.Get();
+	pbarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
+	pbarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_DEPTH_WRITE;
 	mCommandList->ResourceBarrier(
 		1,
-		
-	)
+		&pbarrier
+	);
+
+	mCommandList->Close();
+	ID3D12CommandList* cmdsLists[] = { mCommandList.Get() };
+	mCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
+
+	FlushCommandQueue();
+
+	// 更新视口和剪裁矩形的配置信息
+	
+	mViewport.TopLeftX = 0.0f;
+	mViewport.TopLeftY = 0.0f;
+	mViewport.Width = static_cast<float>(mClientWidth);
+	mViewport.Height = static_cast<float>(mClientHeight);
+	mViewport.MinDepth = 0.0f;
+	mViewport.MaxDepth = 1.0f;
+
+	mScissorRect = { 0 ,0 , mClientWidth / 2, mClientHeight / 2 };
 
 }
 
@@ -275,12 +334,12 @@ LRESULT D3DApp::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		if (LOWORD(wParam) == WA_INACTIVE)
 		{
 			mAppPaused = true;
-			mTimer.Stop();
+			//mTimer.Stop();
 		}
 		else
 		{
 			mAppPaused = false;
-			mTimer.Start();
+			//mTimer.Start();
 		}
 		return 0;
 
@@ -345,7 +404,7 @@ LRESULT D3DApp::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_ENTERSIZEMOVE:
 		mAppPaused = true;
 		mResizing = true;
-		mTimer.Stop();
+		//mTimer.Stop();
 		return 0;
 
 		// WM_EXITSIZEMOVE is sent when the user releases the resize bars.
@@ -353,7 +412,7 @@ LRESULT D3DApp::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_EXITSIZEMOVE:
 		mAppPaused = false;
 		mResizing = false;
-		mTimer.Start();
+		//mTimer.Start();
 		OnResize();
 		return 0;
 
@@ -377,15 +436,15 @@ LRESULT D3DApp::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_LBUTTONDOWN:
 	case WM_MBUTTONDOWN:
 	case WM_RBUTTONDOWN:
-		OnMouseDown(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+		//OnMouseDown(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 		return 0;
 	case WM_LBUTTONUP:
 	case WM_MBUTTONUP:
 	case WM_RBUTTONUP:
-		OnMouseUp(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+		//OnMouseUp(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 		return 0;
 	case WM_MOUSEMOVE:
-		OnMouseMove(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+		//OnMouseMove(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 		return 0;
 	case WM_KEYUP:
 		if (wParam == VK_ESCAPE)
@@ -393,10 +452,14 @@ LRESULT D3DApp::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			PostQuitMessage(0);
 		}
 		else if ((int)wParam == VK_F2)
-			Set4xMsaaState(!m4xMsaaState);
+			Modify4xMsaaState(m4xMsaaState);
 
 		return 0;
 	}
 
 	return DefWindowProc(hwnd, msg, wParam, lParam);
+}
+
+void D3DApp::Modify4xMsaaState(bool prevstate) {
+	m4xMsaaState = !prevstate;
 }

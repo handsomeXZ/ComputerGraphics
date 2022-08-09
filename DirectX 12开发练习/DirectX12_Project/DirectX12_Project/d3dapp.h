@@ -17,6 +17,8 @@ protected:
 public:
     static D3DApp* GetApp();
 
+    int Run();
+
     virtual LRESULT MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 protected:
@@ -27,10 +29,15 @@ protected:
     void CreateSwapChain();
     void FlushCommandQueue();
 
-    virtual void Onresize();
+    virtual bool Initialize();
+    virtual void OnResize();
+    virtual void Update() = 0;
+    virtual void Draw() = 0;
 
     D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView();
     D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView();
+
+    void Modify4xMsaaState(bool prevstate);
 
 protected:
     static D3DApp* mApp;
@@ -66,18 +73,26 @@ protected:
     UINT mDsvDescriptorSize;
     UINT mCbvUavDescriptorSize;
 
-    //ÃèÊö·û
+    // ÃèÊö·û
 
 
-    //»º³åÇø
+    // »º³åÇø
     Microsoft::WRL::ComPtr<ID3D12Resource> mBackBuffers[mSwapChainBufferCount];
     Microsoft::WRL::ComPtr<ID3D12Resource> mDepthStencilBuffer;
     DXGI_FORMAT mDepthStencilFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+
+    // ÊÓ¿Ú£¬¼ô²Ã¾ØÐÎ
+    D3D12_VIEWPORT mViewport;
+    D3D12_RECT mScissorRect;
 
     // Derived class should set these in derived constructor to customize starting values.
     std::wstring mMainWndCaption = L"d3d App";
     int mClientWidth = 800;
     int mClientHeight = 600;
+    bool mAppPaused = false;
+    bool mMinimized = false;
+    bool mMaximized = true;
+    bool mResizing = false;
 };
 
 
