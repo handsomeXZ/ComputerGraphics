@@ -13,15 +13,18 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="头文件\Example">
+      <UniqueIdentifier>{53244c71-1129-4a10-92a4-8e81ce0223fe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\Example">
+      <UniqueIdentifier>{ef08f642-935c-4d67-a1f0-01005e5ec384}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="d3dapp.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="d3dUtil.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="Box.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="d3dx12.h">
@@ -33,6 +36,15 @@
     <ClInclude Include="UploadBuffer.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Example\MultiGeo.h">
+      <Filter>头文件\Example</Filter>
+    </ClInclude>
+    <ClInclude Include="Example\Box.h">
+      <Filter>头文件\Example</Filter>
+    </ClInclude>
+    <ClInclude Include="FrameResource.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="d3dapp.cpp">
@@ -41,10 +53,19 @@
     <ClCompile Include="d3dUtil.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Box.cpp">
+    <ClCompile Include="MathHelper.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="MathHelper.cpp">
+    <ClCompile Include="MainWin.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Example\MultiGeo.cpp">
+      <Filter>源文件\Example</Filter>
+    </ClCompile>
+    <ClCompile Include="Example\Box.cpp">
+      <Filter>源文件\Example</Filter>
+    </ClCompile>
+    <ClCompile Include="FrameResource.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

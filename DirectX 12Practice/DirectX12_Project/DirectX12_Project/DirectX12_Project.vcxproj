@@ -19,17 +19,22 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Box.h" />
     <ClInclude Include="d3dapp.h" />
     <ClInclude Include="d3dUtil.h" />
     <ClInclude Include="d3dx12.h" />
+    <ClInclude Include="Example\Box.h" />
+    <ClInclude Include="Example\MultiGeo.h" />
+    <ClInclude Include="FrameResource.h" />
     <ClInclude Include="MathHelper.h" />
     <ClInclude Include="UploadBuffer.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Box.cpp" />
     <ClCompile Include="d3dapp.cpp" />
     <ClCompile Include="d3dUtil.cpp" />
+    <ClCompile Include="Example\Box.cpp" />
+    <ClCompile Include="Example\MultiGeo.cpp" />
+    <ClCompile Include="FrameResource.cpp" />
+    <ClCompile Include="MainWin.cpp" />
     <ClCompile Include="MathHelper.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

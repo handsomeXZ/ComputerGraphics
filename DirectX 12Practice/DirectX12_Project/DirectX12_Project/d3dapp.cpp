@@ -228,7 +228,7 @@ void D3DApp::FlushCommandQueue() {
 	assert(mCommandQueue);
 
 	mCurrentFence++;
-
+	
 	mCommandQueue->Signal(mFence.Get(), mCurrentFence);
 	while (mFence->GetCompletedValue() < mCurrentFence) {
 		HANDLE eventHandle = CreateEventEx(nullptr, nullptr, false, EVENT_ALL_ACCESS);
