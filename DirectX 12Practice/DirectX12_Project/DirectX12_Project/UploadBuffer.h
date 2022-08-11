@@ -15,7 +15,7 @@ public:
 			mElementByteSize = sizeof(T);
 		}
 		CD3DX12_HEAP_PROPERTIES properties(D3D12_HEAP_TYPE_UPLOAD);
-		CD3DX12_RESOURCE_DESC&& desc = CD3DX12_RESOURCE_DESC::Buffer(1 * mElementByteSize);
+		CD3DX12_RESOURCE_DESC&& desc = CD3DX12_RESOURCE_DESC::Buffer(elementCount * mElementByteSize);
 		pdevice->CreateCommittedResource(
 			&properties,
 			D3D12_HEAP_FLAG_NONE,

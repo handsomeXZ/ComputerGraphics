@@ -219,16 +219,122 @@ void MultiGeo::BuildShapeGeometry() {
     mGeometries[MeshGeo->Name] = std::move(MeshGeo);
 
 }
+void MultiGeo::BuildRenderItems(){
+    auto boxRitem = std::make_unique<RenderItem>();
+    DirectX::XMStoreFloat4x4(&boxRitem->World,
+        DirectX::XMMatrixScaling(2.0f, 2.0f, 2.0f) * DirectX::XMMatrixTranslation(0.0f, 0.5f, 0.0f));
+    boxRitem->ObjectCBIndex = 0;
+    boxRitem->Geo = mGeometries["shapeGeo"].get();
+    boxRitem->IndexCount = boxRitem->Geo->DrawArgs[0].IndexCount;
+    boxRitem->primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+    boxRitem->StartIndexLocation = boxRitem->Geo->DrawArgs[0].StartIndexLocation;
+    boxRitem->BaseVertexLocation = boxRitem->Geo->DrawArgs[0].BaseVertexLocation;
 
+    mAllRitems.push_back(std::move(boxRitem));
 
-void MultiGeo::BuildCBuffer() {
-    ObjectCBuffer = std::make_unique<UploadBuffer<ObjectConstants>>(md3dDevice.Get(), 1, true);
-    // 因为只要绘制一个物体，所以创建一个存有单个 CBV 描述符堆即可
-    D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-    cbvDesc.SizeInBytes = d3dUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
-    cbvDesc.BufferLocation = ObjectCBuffer->Get()->GetGPUVirtualAddress();
+    auto gridRitem = std::make_unique<RenderItem>();
+    gridRitem->World = MathHelper::Identity4x4();
+    gridRitem->ObjectCBIndex = 1;
+    gridRitem->Geo = mGeometries["shapeGeo"].get();
+    gridRitem->primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+    gridRitem->IndexCount = gridRitem->Geo->DrawArgs[1].IndexCount;
+    gridRitem->StartIndexLocation = gridRitem->Geo->DrawArgs[1].StartIndexLocation;
+    gridRitem->BaseVertexLocation = gridRitem->Geo->DrawArgs[1].BaseVertexLocation;
+    mAllRitems.push_back(std::move(gridRitem));
 
-    md3dDevice->CreateConstantBufferView(&cbvDesc, mCbvHeap->GetCPUDescriptorHandleForHeapStart());
+    UINT objCBIndex = 2;
+    for (int i = 0; i < 5; ++i)
+    {
+        auto leftCylRitem = std::make_unique<RenderItem>();
+        auto rightCylRitem = std::make_unique<RenderItem>();
+        auto leftSphereRitem = std::make_unique<RenderItem>();
+        auto rightSphereRitem = std::make_unique<RenderItem>();
+
+        DirectX::XMMATRIX leftCylWorld = DirectX::XMMatrixTranslation(-5.0f, 1.5f, -10.0f + i * 5.0f);
+        DirectX::XMMATRIX rightCylWorld = DirectX::XMMatrixTranslation(+5.0f, 1.5f, -10.0f + i * 5.0f);
+
+        DirectX::XMMATRIX leftSphereWorld = DirectX::XMMatrixTranslation(-5.0f, 3.5f, -10.0f + i * 5.0f);
+        DirectX::XMMATRIX rightSphereWorld = DirectX::XMMatrixTranslation(+5.0f, 3.5f, -10.0f + i * 5.0f);
+
+        XMStoreFloat4x4(&leftCylRitem->World, rightCylWorld);
+        leftCylRitem->ObjectCBIndex = objCBIndex++;
+        leftCylRitem->Geo = mGeometries["shapeGeo"].get();
+        leftCylRitem->primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+        leftCylRitem->IndexCount = leftCylRitem->Geo->DrawArgs[3].IndexCount;
+        leftCylRitem->StartIndexLocation = leftCylRitem->Geo->DrawArgs[3].StartIndexLocation;
+        leftCylRitem->BaseVertexLocation = leftCylRitem->Geo->DrawArgs[3].BaseVertexLocation;
+
+        XMStoreFloat4x4(&rightCylRitem->World, leftCylWorld);
+        rightCylRitem->ObjectCBIndex = objCBIndex++;
+        rightCylRitem->Geo = mGeometries["shapeGeo"].get();
+        rightCylRitem->primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+        rightCylRitem->IndexCount = rightCylRitem->Geo->DrawArgs[3].IndexCount;
+        rightCylRitem->StartIndexLocation = rightCylRitem->Geo->DrawArgs[3].StartIndexLocation;
+        rightCylRitem->BaseVertexLocation = rightCylRitem->Geo->DrawArgs[3].BaseVertexLocation;
+
+        XMStoreFloat4x4(&leftSphereRitem->World, leftSphereWorld);
+        leftSphereRitem->ObjectCBIndex = objCBIndex++;
+        leftSphereRitem->Geo = mGeometries["shapeGeo"].get();
+        leftSphereRitem->primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+        leftSphereRitem->IndexCount = leftSphereRitem->Geo->DrawArgs[2].IndexCount;
+        leftSphereRitem->StartIndexLocation = leftSphereRitem->Geo->DrawArgs[2].StartIndexLocation;
+        leftSphereRitem->BaseVertexLocation = leftSphereRitem->Geo->DrawArgs[2].BaseVertexLocation;
+
+        XMStoreFloat4x4(&rightSphereRitem->World, rightSphereWorld);
+        rightSphereRitem->ObjectCBIndex = objCBIndex++;
+        rightSphereRitem->Geo = mGeometries["shapeGeo"].get();
+        rightSphereRitem->primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+        rightSphereRitem->IndexCount = rightSphereRitem->Geo->DrawArgs[2].IndexCount;
+        rightSphereRitem->StartIndexLocation = rightSphereRitem->Geo->DrawArgs[2].StartIndexLocation;
+        rightSphereRitem->BaseVertexLocation = rightSphereRitem->Geo->DrawArgs[2].BaseVertexLocation;
+
+        mAllRitems.push_back(std::move(leftCylRitem));
+        mAllRitems.push_back(std::move(rightCylRitem));
+        mAllRitems.push_back(std::move(leftSphereRitem));
+        mAllRitems.push_back(std::move(rightSphereRitem));
+    }
+    for (auto& e : mAllRitems) {
+        mOpaqueRitems.push_back(e.get());
+    }
+
+}
+void MultiGeo::BuildFrameResources()
+{
+    for (int i = 0; i < gNumFrameResource; ++i)
+    {
+        mFrameResources.push_back(std::make_unique<FrameResource>(md3dDevice.Get(),
+            1, (UINT)mAllRitems.size()));
+    }
+}
+void MultiGeo::BuildCBufferView() {
+    UINT objByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
+    UINT objCount = (UINT)mOpaqueRitems.size();
+
+    for (int frameindex = 0; frameindex < gNumFrameResource; frameindex++)
+    {
+        auto objectCB = mFrameResources[frameindex]->ObjectCB->Get();
+        for (int i = 0; i < objCount; i++)
+        {
+            D3D12_GPU_VIRTUAL_ADDRESS address = objectCB->GetGPUVirtualAddress();
+            address += i * objByteSize;
+
+            D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+            cbvDesc.SizeInBytes = objByteSize;
+            cbvDesc.BufferLocation = address;
+            
+            UINT heapIndex = frameindex * objCount + 1;
+            auto handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(mCbvHeap->GetCPUDescriptorHandleForHeapStart());
+            handle.Offset(heapIndex, mCbvUavDescriptorSize);
+
+            md3dDevice->CreateConstantBufferView(&cbvDesc, handle);
+        }
+    }
+
+    
+
+    
+
+    
 
 }
 
@@ -316,12 +422,21 @@ void MultiGeo::BuildPSO() {
 
 void MultiGeo::BuildDescriptorHeaps()
 {
+
+
+    UINT objCount = (UINT)mOpaqueRitems.size();
+
+    // 为每个帧资源的每个物体都创建一个CBV描述符
+    // 为每帧的渲染过程增加一个CBV
+    UINT numDesc = (objCount + 1) * gNumFrameResource;
+
     D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc;
-    cbvHeapDesc.NumDescriptors = 1;
+    cbvHeapDesc.NumDescriptors = numDesc;
     cbvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
     cbvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
     cbvHeapDesc.NodeMask = 0;
     ThrowIfFailed(md3dDevice->CreateDescriptorHeap(&cbvHeapDesc,
         IID_PPV_ARGS(&mCbvHeap)));
+
 }
 

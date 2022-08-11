@@ -17,7 +17,7 @@ struct RenderItem {
     int NumFramesDirty = gNumFrameResource;
 
     // GPU 常量缓冲区中，当前渲染项中的，物体常量缓冲区
-    UINT ObjectIndex = -1;
+    UINT ObjectCBIndex = 0;
 
     D3D12_PRIMITIVE_TOPOLOGY primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
@@ -50,9 +50,11 @@ private:
 
 
     void BuildShapeGeometry();
-    void BuildCBuffer();
+    void BuildRenderItems();
+    void BuildCBufferView(); 
     void BuildRootSigantureAndDescriptorTable();
     void BuildShadersAndInputLayout();
+    void BuildFrameResources();
     void BuildPSO();
     void BuildDescriptorHeaps();
 
@@ -92,7 +94,6 @@ private:
     
     // RenderItem
     std::vector<std::unique_ptr<RenderItem>> mAllRitems;
-
     std::vector<RenderItem*> mOpaqueRitems;
     std::vector<RenderItem*> mTransparentRitems;
 
