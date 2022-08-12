@@ -42,6 +42,8 @@ int D3DApp::Run() {
 			if (!mAppPaused) {
 				Update();
 				Draw();
+
+				
 			}
 			else
 			{
@@ -247,7 +249,6 @@ void D3DApp::OnResize() {
 	// 等待命令队列执行完毕
 	FlushCommandQueue();
 
-	mCommandAllocator->Reset();
 	mCommandList->Reset(mCommandAllocator.Get(), nullptr);
 
 	// 释放缓冲区

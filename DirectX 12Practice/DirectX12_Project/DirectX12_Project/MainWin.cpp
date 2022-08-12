@@ -1,5 +1,6 @@
 #pragma once
-#include "Example/Box.h"
+
+#include "Example/MultiGeo.h"
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance,
     PSTR cmdLine, int showCmd)
@@ -11,7 +12,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance,
 
     try
     {
-        Box theApp(hInstance);
+        MultiGeo theApp(hInstance);
         if (!theApp.Initialize())
             return 0;
 

@@ -3,12 +3,12 @@
 #include "../d3dApp.h"
 #include "../UploadBuffer.h"
 
-struct Vertex {
+struct BoxVertex {
     DirectX::XMFLOAT3 Pos;
     DirectX::XMFLOAT3 COlor;
 };
 
-struct ObjectConstants {
+struct BoxObjectConstants {
     DirectX::XMFLOAT4X4 WorldViewProj = MathHelper::Identity4x4();
 };
 
@@ -43,7 +43,7 @@ private:
     Microsoft::WRL::ComPtr<ID3D12Resource> mIndexBuffer = nullptr;
     Microsoft::WRL::ComPtr<ID3D12Resource> mIndexUploadBuffer = nullptr;
 
-    std::unique_ptr<UploadBuffer<ObjectConstants>> ObjectCBuffer = nullptr;
+    std::unique_ptr<UploadBuffer<BoxObjectConstants>> ObjectCBuffer = nullptr;
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mCbvHeap = nullptr;
     Microsoft::WRL::ComPtr<ID3D12RootSignature> mRootSignature = nullptr;
 

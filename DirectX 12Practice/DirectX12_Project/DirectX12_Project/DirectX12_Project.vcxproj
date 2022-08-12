@@ -25,6 +25,7 @@
     <ClInclude Include="Example\Box.h" />
     <ClInclude Include="Example\MultiGeo.h" />
     <ClInclude Include="FrameResource.h" />
+    <ClInclude Include="GeometryGenerator.h" />
     <ClInclude Include="MathHelper.h" />
     <ClInclude Include="UploadBuffer.h" />
   </ItemGroup>
@@ -34,6 +35,7 @@
     <ClCompile Include="Example\Box.cpp" />
     <ClCompile Include="Example\MultiGeo.cpp" />
     <ClCompile Include="FrameResource.cpp" />
+    <ClCompile Include="GeometryGenerator.cpp" />
     <ClCompile Include="MainWin.cpp" />
     <ClCompile Include="MathHelper.cpp" />
   </ItemGroup>
@@ -134,7 +136,7 @@
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
+      <ConformanceMode>false</ConformanceMode>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

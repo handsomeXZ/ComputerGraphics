@@ -60,7 +60,7 @@ void Box::Update() {
     DirectX::XMMATRIX worldViewProj = world * view * proj;
 
     // Update the constant buffer with the latest worldViewProj matrix.
-    ObjectConstants objConstants;
+    BoxObjectConstants objConstants;
     XMStoreFloat4x4(&objConstants.WorldViewProj, XMMatrixTranspose(worldViewProj));
     ObjectCBuffer->CopyData(0, objConstants);
 }
@@ -93,8 +93,8 @@ void Box::Draw() {
     mCommandList->SetGraphicsRootSignature(mRootSignature.Get());
 
     Vbv.BufferLocation = mVertexBuffer->GetGPUVirtualAddress();
-    Vbv.SizeInBytes = 8 * sizeof(Vertex);
-    Vbv.StrideInBytes = sizeof(Vertex);
+    Vbv.SizeInBytes = 8 * sizeof(BoxVertex);
+    Vbv.StrideInBytes = sizeof(BoxVertex);
     Ibv.BufferLocation = mIndexBuffer->GetGPUVirtualAddress();
     Ibv.SizeInBytes = 36 * sizeof(std::uint16_t);
     Ibv.Format = DXGI_FORMAT_R16_UINT;
@@ -130,7 +130,7 @@ void Box::Draw() {
 }
 
 void Box::BuildVertexBuffers() {
-    Vertex vertexs[] = {
+    BoxVertex vertexs[] = {
         { DirectX::XMFLOAT3(-1.0f,-1.0f,-1.0f),DirectX::XMFLOAT3(DirectX::Colors::White) },
         { DirectX::XMFLOAT3(+1.0f,-1.0f,-1.0f),DirectX::XMFLOAT3(DirectX::Colors::Black) },
         { DirectX::XMFLOAT3(+1.0f,+1.0f,-1.0f),DirectX::XMFLOAT3(DirectX::Colors::Red) },
@@ -141,7 +141,7 @@ void Box::BuildVertexBuffers() {
         { DirectX::XMFLOAT3(+1.0f,-1.0f,+1.0f),DirectX::XMFLOAT3(DirectX::Colors::Magenta) },
     };
 
-    const UINT64 vbByteSize = 8 * sizeof(Vertex);
+    const UINT64 vbByteSize = 8 * sizeof(BoxVertex);
     mVertexBuffer = d3dUtil::CreateDefaultBuffer(md3dDevice.Get(), mCommandList.Get(), vertexs, vbByteSize, mVertexUploadBuffer);
 
     //D3D12_VERTEX_BUFFER_VIEW Vbv = {};
@@ -193,10 +193,10 @@ void Box::BuildIndexBuffer() {
 }
 
 void Box::BuildCBuffer() {
-    ObjectCBuffer = std::make_unique<UploadBuffer<ObjectConstants>>(md3dDevice.Get(), 1, true);
+    ObjectCBuffer = std::make_unique<UploadBuffer<BoxObjectConstants>>(md3dDevice.Get(), 1, true);
     // 因为只要绘制一个物体，所以创建一个存有单个 CBV 描述符堆即可
     D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-    cbvDesc.SizeInBytes = d3dUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
+    cbvDesc.SizeInBytes = d3dUtil::CalcConstantBufferByteSize(sizeof(BoxObjectConstants));
     cbvDesc.BufferLocation = ObjectCBuffer->Get()->GetGPUVirtualAddress();
 
     md3dDevice->CreateConstantBufferView(&cbvDesc, mCbvHeap->GetCPUDescriptorHandleForHeapStart());

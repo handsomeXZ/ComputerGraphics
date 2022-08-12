@@ -17,7 +17,7 @@ struct RenderItem {
     int NumFramesDirty = gNumFrameResource;
 
     // GPU 常量缓冲区中，当前渲染项中的，物体常量缓冲区
-    UINT ObjectCBIndex = 0;
+    UINT ObjectCBIndex = -1;
 
     D3D12_PRIMITIVE_TOPOLOGY primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
@@ -46,8 +46,11 @@ private:
     virtual void Update()override;
     virtual void Draw()override;
 
-    void UpdateFrameResource();
 
+    void UpdateCamera();
+    void OnKeyboardInput();
+    void UpdateObjectCBs();
+    void UpdateMainPassCB();
 
     void BuildShapeGeometry();
     void BuildRenderItems();
@@ -57,40 +60,37 @@ private:
     void BuildFrameResources();
     void BuildPSO();
     void BuildDescriptorHeaps();
+    void DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderItem*>& ritems);
 
 private:
-    Microsoft::WRL::ComPtr<ID3D12Resource> mVertexBuffer = nullptr;
-    Microsoft::WRL::ComPtr<ID3D12Resource> mVertexUploadBuffer = nullptr;
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> mIndexBuffer = nullptr;
-    Microsoft::WRL::ComPtr<ID3D12Resource> mIndexUploadBuffer = nullptr;
-
-    std::unique_ptr<UploadBuffer<ObjectConstants>> ObjectCBuffer = nullptr;
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mCbvHeap = nullptr;
     Microsoft::WRL::ComPtr<ID3D12RootSignature> mRootSignature = nullptr;
 
+    bool mIsWireframe = false;
     std::vector<D3D12_INPUT_ELEMENT_DESC> mInputLayout;
     Microsoft::WRL::ComPtr<ID3DBlob> mvsByteCode = nullptr;
     Microsoft::WRL::ComPtr<ID3DBlob> mpsByteCode = nullptr;
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> mPSO = nullptr;
+    std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D12PipelineState>> mPSO;
 
     std::unordered_map<std::string, std::unique_ptr<MeshGeometry>> mGeometries;
 
-    DirectX::XMFLOAT4X4 mWorld = MathHelper::Identity4x4();
+
     DirectX::XMFLOAT4X4 mView = MathHelper::Identity4x4();
     DirectX::XMFLOAT4X4 mProj = MathHelper::Identity4x4();
+    DirectX::XMFLOAT3 mEyePos = { 0.0f, 0.0f, 0.0f };
 
     float mTheta = 1.5f * DirectX::XM_PI;
-    float mPhi = DirectX::XM_PIDIV4;
-    float mRadius = 5.0f;
-    DirectX::XMFLOAT3 mEyePos = { 0.0f, 0.0f, 0.0f };
-    DirectX::XMFLOAT4X4 mView = MathHelper::Identity4x4();
-    DirectX::XMFLOAT4X4 mProj = MathHelper::Identity4x4();
+    float mPhi = 0.2f * DirectX::XM_PI;
+    float mRadius = 15.0f;
+    
+
 
     // FrameResource
     UINT mCurrentFrameResourceIndex = 0;
     std::vector<std::unique_ptr<FrameResource>> mFrameResources;
     FrameResource* mCurrentFrameResource = nullptr;
+    PassConstants mMainPassCB;
     
     // RenderItem
     std::vector<std::unique_ptr<RenderItem>> mAllRitems;

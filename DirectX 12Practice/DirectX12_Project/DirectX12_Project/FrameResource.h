@@ -10,9 +10,10 @@ struct Vertex
 };
 struct PassConstants {
     DirectX::XMFLOAT4X4 View = MathHelper::Identity4x4();
-    DirectX::XMFLOAT4X4 InView = MathHelper::Identity4x4();
+    DirectX::XMFLOAT4X4 InvView = MathHelper::Identity4x4();
     DirectX::XMFLOAT4X4 Proj = MathHelper::Identity4x4();
-    DirectX::XMFLOAT4X4 InProj = MathHelper::Identity4x4();
+    DirectX::XMFLOAT4X4 InvProj = MathHelper::Identity4x4();
+    DirectX::XMFLOAT4X4 ViewProj = MathHelper::Identity4x4();
     DirectX::XMFLOAT4X4 InvViewProj = MathHelper::Identity4x4();
     DirectX::XMFLOAT3 EyePosW = { 0.0f, 0.0f, 0.0f };
     float cbPerObjectPad1 = 0.0f;
@@ -40,7 +41,7 @@ public:
 
     // We cannot reset the allocator until the GPU is done processing the commands.
     // So each frame needs their own allocator.
-    Microsoft::WRL::ComPtr<ID3D12CommandAllocator> mCommandList;
+    Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CmdListAlloc;
 
     // We cannot update a cbuffer until the GPU is done processing the commands
     // that reference it.  So each frame needs their own cbuffers.
