@@ -1,10 +1,4 @@
-﻿  Box.cpp
-  MultiGeo.cpp
-E:\Art\ComputerGraphics\computer graphics study\DirectX 12Practice\DirectX12_Project\DirectX12_Project\Example\MultiGeo.cpp(168,55): warning C4267: “+=”: 从“size_t”转换到“UINT”，可能丢失数据
-E:\Art\ComputerGraphics\computer graphics study\DirectX 12Practice\DirectX12_Project\DirectX12_Project\Example\MultiGeo.cpp(328,27): warning C4018: “<”: 有符号/无符号不匹配
-  FrameResource.cpp
-  MainWin.cpp
-  d3dUtil.cpp
-  d3dapp.cpp
-  正在生成代码...
+﻿  MultiGeo.cpp
+E:\Art\ComputerGraphics\computer graphics study\DirectX 12Practice\DirectX12_Project\DirectX12_Project\Example\MultiGeo.cpp(208,55): warning C4267: “+=”: 从“size_t”转换到“UINT”，可能丢失数据
+E:\Art\ComputerGraphics\computer graphics study\DirectX 12Practice\DirectX12_Project\DirectX12_Project\Example\MultiGeo.cpp(363,27): warning C4018: “<”: 有符号/无符号不匹配
   DirectX12_Project.vcxproj -> E:\Art\ComputerGraphics\computer graphics study\DirectX 12Practice\DirectX12_Project\x64\Debug\DirectX12_Project.exe

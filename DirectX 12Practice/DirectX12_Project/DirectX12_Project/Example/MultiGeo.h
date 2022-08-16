@@ -5,8 +5,6 @@
 #include "../FrameResource.h"
 #include "../GeometryGenerator.h"
 
-const int gNumFrameResource = 3;
-
 
 // 每个物体绘制所需的参数集合
 struct RenderItem {
@@ -21,6 +19,7 @@ struct RenderItem {
 
     D3D12_PRIMITIVE_TOPOLOGY primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
+    Material* Mat = nullptr;
     MeshGeometry* Geo = nullptr;
 
     // DrawIndexedInstanced
@@ -51,15 +50,17 @@ private:
     void OnKeyboardInput();
     void UpdateObjectCBs();
     void UpdateMainPassCB();
+    void UpdateMaterials();
 
-    void BuildShapeGeometry();
-    void BuildRenderItems();
+    void BuildMaterials();
     void BuildCBufferView(); 
     void BuildRootSigantureAndDescriptorTable();
-    void BuildShadersAndInputLayout();
-    void BuildFrameResources();
-    void BuildPSO();
     void BuildDescriptorHeaps();
+    void BuildShadersAndInputLayout();
+    void BuildShapeGeometry();
+    void BuildPSO();
+    void BuildFrameResources();
+    void BuildRenderItems();
     void DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderItem*>& ritems);
 
 private:
@@ -74,7 +75,7 @@ private:
     std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D12PipelineState>> mPSO;
 
     std::unordered_map<std::string, std::unique_ptr<MeshGeometry>> mGeometries;
-
+    std::unordered_map<std::string, std::unique_ptr<Material>> mMaterials;
 
     DirectX::XMFLOAT4X4 mView = MathHelper::Identity4x4();
     DirectX::XMFLOAT4X4 mProj = MathHelper::Identity4x4();

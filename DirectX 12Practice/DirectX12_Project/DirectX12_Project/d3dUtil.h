@@ -16,6 +16,12 @@
 #include "DirectXCollision.h"
 #include "unordered_map"
 
+#define MAX_LIGHTS 10
+
+
+extern const int gNumFrameResource;
+
+
 inline std::wstring AnsiToWString(const std::string& str)
 {
     WCHAR buffer[512];
@@ -138,6 +144,35 @@ struct MeshGeometry
         IndexBufferUploader = nullptr;
     }
 };
+struct Material {
+    std::string Name;
+
+    int MatCBIndex = -1;
+
+    int NumFramesDirty = gNumFrameResource;
+
+    DirectX::XMFLOAT4 DiffuseAlbedo = { 1.0f,1.0f,1.0f,1.0f };
+    DirectX::XMFLOAT3 FresnelR0 = { 0.0f,0.0f,0.0f };
+    float Routhness = 0.0f;
+    DirectX::XMFLOAT4X4 MatTransform = MathHelper::Identity4x4();
+};
+struct MaterialConstants {
+
+    DirectX::XMFLOAT4 DiffuseAlbedo = { 1.0f,1.0f,1.0f,1.0f };
+    DirectX::XMFLOAT3 FresnelR0 = { 0.0f,0.0f,0.0f };
+    float Routhness = 0.0f;
+
+    DirectX::XMFLOAT4X4 MatTransform = MathHelper::Identity4x4();
+};
+struct Light {
+    DirectX::XMFLOAT3 Strength = { 1.0f,1.0f,1.0f };
+    float Falloffstart = 1.0f;  // 仅供点光源、聚光灯使用
+    DirectX::XMFLOAT3 Direction = { 0.0f,-1.0f,0.0f };  // 仅供方向光源、聚光灯使用
+    float Falloffend = 10.0f;  // 仅供点光源、聚光灯使用
+    DirectX::XMFLOAT3 Position = { 0.0f,0.0f,0.0f };    // 仅供点光源、聚光灯使用
+    float SpotPower = 64.0f;    // 仅供点光源使用
+};
+
 #ifndef ThrowIfFailed
 #define ThrowIfFailed(x)                                              \
 {                                                                     \

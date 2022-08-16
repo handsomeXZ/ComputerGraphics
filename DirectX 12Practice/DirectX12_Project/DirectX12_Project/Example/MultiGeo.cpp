@@ -1,5 +1,7 @@
 #include "MultiGeo.h"
 
+const int gNumFrameResource = 3;
+
 MultiGeo::MultiGeo(HINSTANCE hInstance)
     : D3DApp(hInstance)
 {
@@ -22,6 +24,7 @@ bool MultiGeo::Initialize() {
     ThrowIfFailed(mCommandList->Reset(mCommandAllocator.Get(), nullptr));
 
     BuildRootSigantureAndDescriptorTable();
+    BuildMaterials();
     BuildShadersAndInputLayout();
     BuildShapeGeometry();
     BuildRenderItems();
@@ -60,6 +63,7 @@ void MultiGeo::Update() {
         CloseHandle(eventhandle);
     }
 
+    UpdateMaterials();
     UpdateObjectCBs();
     UpdateMainPassCB();
 
@@ -133,6 +137,42 @@ void MultiGeo::Draw() {
     mCommandQueue->Signal(mFence.Get(), mCurrentFence);
 }
 
+void MultiGeo::BuildMaterials() {
+    auto mat = std::make_unique<Material>();
+    auto mat1 = std::make_unique<Material>();
+    auto mat2 = std::make_unique<Material>();
+    auto mat3 = std::make_unique<Material>();
+    
+    mat->Name = "RedMat";
+    mat->MatCBIndex = 0;
+    mat->DiffuseAlbedo = {1.0f,0.0f,0.0f,1.0f};
+    mat->Routhness = 0.1f;
+    
+
+    mat1->Name = "BlueMat";
+    mat1->MatCBIndex = 1;
+    mat1->DiffuseAlbedo = { 0.0f,0.0f,1.0f,1.0f };
+    mat1->Routhness = 0.1f;
+    
+
+    mat2->Name = "GreenMat";
+    mat2->MatCBIndex = 2;
+    mat2->DiffuseAlbedo = { 0.0f,1.0f,0.0f,1.0f };
+    mat2->Routhness = 0.1f;
+    
+
+    mat3->Name = "GrayMat";
+    mat3->MatCBIndex = 3;
+    mat3->DiffuseAlbedo = { 0.5f,0.5f,0.5f,1.0f };
+    mat3->Routhness = 0.5f;
+
+    mMaterials["RedMat"] = std::move(mat);
+    mMaterials["BlueMat"] = std::move(mat1);
+    mMaterials["GreenMat"] = std::move(mat2);
+    mMaterials["GrayMat"] = std::move(mat3);
+    
+}
+
 void MultiGeo::BuildShapeGeometry() {
 
     GeometryGenerator geoGen;
@@ -169,21 +209,15 @@ void MultiGeo::BuildShapeGeometry() {
     }
 
     std::vector<Vertex> vertices(totalVertexCount);
-
     UINT k = 0;
-    const DirectX::XMFLOAT4 colors[4] = {
-        DirectX::XMFLOAT4(DirectX::Colors::DarkGreen),
-        DirectX::XMFLOAT4(DirectX::Colors::ForestGreen),
-        DirectX::XMFLOAT4(DirectX::Colors::Crimson),
-        DirectX::XMFLOAT4(DirectX::Colors::SteelBlue)
-    };
+
     for (size_t i = 0; i < _countof(geoData); i++)
     {
         for (size_t j = 0; j < geoData[i].Vertices.size(); j++,k++)
         {
             
             vertices[k].Pos = geoData[i].Vertices[j].Position;
-            vertices[k].Color = colors[i];
+            vertices[k].Normal = geoData[i].Vertices[j].Normal;
         }
     }
 
@@ -198,10 +232,10 @@ void MultiGeo::BuildShapeGeometry() {
     const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
     const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
 
-    D3DCreateBlob(vbByteSize, &MeshGeo->VertexBufferCPU);
+    ThrowIfFailed(D3DCreateBlob(vbByteSize, &MeshGeo->VertexBufferCPU));
     CopyMemory(MeshGeo->VertexBufferCPU->GetBufferPointer(), vertices.data(),vbByteSize);
 
-    D3DCreateBlob(ibByteSize, &MeshGeo->IndexBufferCPU);
+    ThrowIfFailed(D3DCreateBlob(ibByteSize, &MeshGeo->IndexBufferCPU));
     CopyMemory(MeshGeo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
 
     MeshGeo->VertexBufferGPU = d3dUtil::CreateDefaultBuffer(md3dDevice.Get(), mCommandList.Get(),
@@ -229,10 +263,9 @@ void MultiGeo::BuildRenderItems(){
     DirectX::XMStoreFloat4x4(&boxRitem->World,
         DirectX::XMMatrixScaling(2.0f, 2.0f, 2.0f) * DirectX::XMMatrixTranslation(0.0f, 0.5f, 0.0f));
 
-    
-
     boxRitem->ObjectCBIndex = 0;
     boxRitem->Geo = mGeometries["shapeGeo"].get();
+    boxRitem->Mat = mMaterials["RedMat"].get();
     boxRitem->IndexCount = boxRitem->Geo->DrawArgs[0].IndexCount;
     boxRitem->primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
     boxRitem->StartIndexLocation = boxRitem->Geo->DrawArgs[0].StartIndexLocation;
@@ -243,6 +276,7 @@ void MultiGeo::BuildRenderItems(){
     auto gridRitem = std::make_unique<RenderItem>();
     gridRitem->World = MathHelper::Identity4x4();
     gridRitem->ObjectCBIndex = 1;
+    gridRitem->Mat = mMaterials["GrayMat"].get();
     gridRitem->Geo = mGeometries["shapeGeo"].get();
     gridRitem->primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
     gridRitem->IndexCount = gridRitem->Geo->DrawArgs[1].IndexCount;
@@ -266,6 +300,7 @@ void MultiGeo::BuildRenderItems(){
 
         XMStoreFloat4x4(&leftCylRitem->World, rightCylWorld);
         leftCylRitem->ObjectCBIndex = objCBIndex++;
+        leftCylRitem->Mat = mMaterials["BlueMat"].get();
         leftCylRitem->Geo = mGeometries["shapeGeo"].get();
         leftCylRitem->primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
         leftCylRitem->IndexCount = leftCylRitem->Geo->DrawArgs[3].IndexCount;
@@ -274,6 +309,7 @@ void MultiGeo::BuildRenderItems(){
 
         XMStoreFloat4x4(&rightCylRitem->World, leftCylWorld);
         rightCylRitem->ObjectCBIndex = objCBIndex++;
+        rightCylRitem->Mat = mMaterials["BlueMat"].get();
         rightCylRitem->Geo = mGeometries["shapeGeo"].get();
         rightCylRitem->primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
         rightCylRitem->IndexCount = rightCylRitem->Geo->DrawArgs[3].IndexCount;
@@ -282,6 +318,7 @@ void MultiGeo::BuildRenderItems(){
 
         XMStoreFloat4x4(&leftSphereRitem->World, leftSphereWorld);
         leftSphereRitem->ObjectCBIndex = objCBIndex++;
+        leftSphereRitem->Mat = mMaterials["GreenMat"].get();
         leftSphereRitem->Geo = mGeometries["shapeGeo"].get();
         leftSphereRitem->primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
         leftSphereRitem->IndexCount = leftSphereRitem->Geo->DrawArgs[2].IndexCount;
@@ -290,6 +327,7 @@ void MultiGeo::BuildRenderItems(){
 
         XMStoreFloat4x4(&rightSphereRitem->World, rightSphereWorld);
         rightSphereRitem->ObjectCBIndex = objCBIndex++;
+        rightSphereRitem->Mat = mMaterials["GreenMat"].get();
         rightSphereRitem->Geo = mGeometries["shapeGeo"].get();
         rightSphereRitem->primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
         rightSphereRitem->IndexCount = rightSphereRitem->Geo->DrawArgs[2].IndexCount;
@@ -312,7 +350,7 @@ void MultiGeo::BuildFrameResources()
     for (int i = 0; i < gNumFrameResource; ++i)
     {
         mFrameResources.push_back(std::make_unique<FrameResource>(md3dDevice.Get(),
-            1, (UINT)mAllRitems.size()));
+            1, (UINT)mAllRitems.size(), (UINT)mMaterials.size()));
     }
 }
 void MultiGeo::BuildCBufferView() {
@@ -372,6 +410,9 @@ void MultiGeo::BuildCBufferView() {
 void MultiGeo::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderItem*>& ritems) {
 
     UINT objByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
+    UINT matByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(MaterialConstants));
+
+    auto matCB = mCurrentFrameResource->MatCB->Get();
     for (auto e : ritems)
     {
         D3D12_VERTEX_BUFFER_VIEW vbv = e->Geo->VertexBufferView();
@@ -380,13 +421,14 @@ void MultiGeo::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::ve
         cmdList->IASetIndexBuffer(&ibv);
         cmdList->IASetPrimitiveTopology(e->primitiveType);
 
-        UINT cbvIndex = mCurrentFrameResourceIndex * (UINT)mOpaqueRitems.size() +
-            e->ObjectCBIndex;
-        auto cbvHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(
-            mCbvHeap->GetGPUDescriptorHandleForHeapStart());
+        UINT cbvIndex = mCurrentFrameResourceIndex * (UINT)mOpaqueRitems.size() + e->ObjectCBIndex;
+        auto cbvHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(mCbvHeap->GetGPUDescriptorHandleForHeapStart());
         cbvHandle.Offset(cbvIndex, mCbvUavDescriptorSize);
 
+        D3D12_GPU_VIRTUAL_ADDRESS matAddress = matCB->GetGPUVirtualAddress() + e->Mat->MatCBIndex * matByteSize;
+
         cmdList->SetGraphicsRootDescriptorTable(0, cbvHandle);
+        cmdList->SetGraphicsRootConstantBufferView(2, matAddress);
         cmdList->DrawIndexedInstanced(e->IndexCount, 1, e->StartIndexLocation, e->BaseVertexLocation, 0);
 
     }
@@ -399,17 +441,12 @@ void MultiGeo::BuildRootSigantureAndDescriptorTable() {
     // 以描述符表作为根参数
     CD3DX12_DESCRIPTOR_RANGE cbvTable[2];
     cbvTable[0].Init(
-        D3D12_DESCRIPTOR_RANGE_TYPE_CBV,
-        1,
-        0
-    );
+        D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
     cbvTable[1].Init(
-        D3D12_DESCRIPTOR_RANGE_TYPE_CBV,
-        1,
-        1
-    );
+        D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1);
+
     // 根参数
-    CD3DX12_ROOT_PARAMETER slotRootParameter[2];
+    CD3DX12_ROOT_PARAMETER slotRootParameter[3];
 
     slotRootParameter[0].InitAsDescriptorTable(
         1,
@@ -419,9 +456,11 @@ void MultiGeo::BuildRootSigantureAndDescriptorTable() {
         1,
         &cbvTable[1]
     );
+    slotRootParameter[2].InitAsConstantBufferView(2);
+
     // 根签名的描述
     CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(
-        2, 
+        3, 
         slotRootParameter, 
         0, nullptr, 
         D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
@@ -446,13 +485,13 @@ void MultiGeo::BuildRootSigantureAndDescriptorTable() {
 }
 
 void MultiGeo::BuildShadersAndInputLayout() {
-    mvsByteCode = d3dUtil::CompileShader(L"Shaders\\MultiGeoColor.hlsl", nullptr, "VS", "vs_5_1");
-    mpsByteCode = d3dUtil::CompileShader(L"Shaders\\MultiGeoColor.hlsl", nullptr, "PS", "ps_5_1");
+    mvsByteCode = d3dUtil::CompileShader(L"Shaders\\LightMultiGeo.hlsl", nullptr, "VS", "vs_5_0");
+    mpsByteCode = d3dUtil::CompileShader(L"Shaders\\LightMultiGeo.hlsl", nullptr, "PS", "ps_5_0");
 
     mInputLayout =
     {
         { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+        { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
     };
 }
 
@@ -470,7 +509,6 @@ void MultiGeo::BuildPSO() {
         mpsByteCode->GetBufferSize()
     };
     psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-    psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
     psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
     psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
     psoDesc.SampleMask = UINT_MAX;
@@ -576,10 +614,41 @@ void MultiGeo::UpdateMainPassCB()
     mMainPassCB.FarZ = 1000.0f;
     mMainPassCB.TotalTime = 0;
     mMainPassCB.DeltaTime = 0;
-
+    mMainPassCB.AmbientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
+    mMainPassCB.Lights[0].Direction = { 0.57735f, -0.57735f, 0.57735f };
+    mMainPassCB.Lights[0].Strength = { 0.6f, 0.6f, 0.6f };
+    mMainPassCB.Lights[1].Direction = { -0.57735f, -0.57735f, 0.57735f };
+    mMainPassCB.Lights[1].Strength = { 0.3f, 0.3f, 0.3f };
+    mMainPassCB.Lights[2].Direction = { 0.0f, -0.707f, -0.707f };
+    mMainPassCB.Lights[2].Strength = { 0.15f, 0.15f, 0.15f };
 
     auto currPassCB = mCurrentFrameResource->PassCB.get();
     currPassCB->CopyData(0, mMainPassCB);
+}
+void MultiGeo::UpdateMaterials() {
+    auto MatetialCB = mCurrentFrameResource->MatCB.get();
+    for (auto& e : mMaterials)
+    {
+        // Only update the cbuffer data if the constants have changed.  
+        // This needs to be tracked per frame resource.
+        Material* mat = e.second.get();
+        if (mat->NumFramesDirty > 0)
+        {
+
+            DirectX::XMMATRIX matTransform = XMLoadFloat4x4(&mat->MatTransform);
+
+            MaterialConstants matConstans;
+
+            matConstans.DiffuseAlbedo = mat->DiffuseAlbedo;
+            matConstans.FresnelR0 = mat->FresnelR0;
+            matConstans.Routhness = mat->Routhness;
+            DirectX::XMStoreFloat4x4(&matConstans.MatTransform, DirectX::XMMatrixTranspose(matTransform));
+            MatetialCB->CopyData(mat->MatCBIndex, matConstans);
+
+            // Next FrameResource need to be updated too.
+            mat->NumFramesDirty--;
+        }
+    }
 }
 
 void MultiGeo::OnKeyboardInput()
