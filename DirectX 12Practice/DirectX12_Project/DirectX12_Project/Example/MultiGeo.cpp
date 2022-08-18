@@ -1,4 +1,8 @@
 #include "MultiGeo.h"
+#include "DDSTextureLoader.h"
+#include "ResourceUploadBatch.h"
+#include "DirectXHelpers.h"
+//#include "../test/DDSTextureLoader.h"
 
 const int gNumFrameResource = 3;
 
@@ -23,6 +27,7 @@ bool MultiGeo::Initialize() {
     // Reset the command list to prep for initialization commands.
     ThrowIfFailed(mCommandList->Reset(mCommandAllocator.Get(), nullptr));
 
+    LoadTexture();
     BuildRootSigantureAndDescriptorTable();
     BuildMaterials();
     BuildShadersAndInputLayout();
@@ -30,7 +35,8 @@ bool MultiGeo::Initialize() {
     BuildRenderItems();
     BuildFrameResources();
     BuildDescriptorHeaps();
-    BuildCBufferView();
+    //BuildCBufferView();
+    BuildShaderView();
     BuildPSO();
 
     ThrowIfFailed(mCommandList->Close());
@@ -102,15 +108,18 @@ void MultiGeo::Draw() {
     D3D12_CPU_DESCRIPTOR_HANDLE phandle2 = DepthStencilView();
     mCommandList->OMSetRenderTargets(1, &phandle1, true, &phandle2);
 
-    ID3D12DescriptorHeap* descriptorHeaps[] = { mCbvHeap.Get() };
+    ID3D12DescriptorHeap* descriptorHeaps[] = { mSrvHeap.Get() }; //mCbvHeap.Get()
     mCommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 
     mCommandList->SetGraphicsRootSignature(mRootSignature.Get());
 
-    UINT passIndex = mCurrentFrameResourceIndex + (UINT)mOpaqueRitems.size() * gNumFrameResource;
+    /*UINT passIndex = mCurrentFrameResourceIndex + (UINT)mOpaqueRitems.size() * gNumFrameResource;
     auto mHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(mCbvHeap->GetGPUDescriptorHandleForHeapStart());
     mHandle.Offset(passIndex, mCbvUavDescriptorSize);
-    mCommandList->SetGraphicsRootDescriptorTable(1, mHandle);
+    mCommandList->SetGraphicsRootDescriptorTable(1, mHandle);*/
+    auto passCB = mCurrentFrameResource->PassCB->Get();
+    mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
+
 
     DrawRenderItems(mCommandList.Get(), mOpaqueRitems);
 
@@ -142,46 +151,56 @@ void MultiGeo::BuildMaterials() {
     auto mat1 = std::make_unique<Material>();
     auto mat2 = std::make_unique<Material>();
     auto mat3 = std::make_unique<Material>();
+    auto mat4 = std::make_unique<Material>();
     
     mat->Name = "RedMat";
     mat->MatCBIndex = 0;
+    mat->DiffuseSrvHeapIndex = 0;
     mat->DiffuseAlbedo = {1.0f,0.0f,0.0f,1.0f};
     mat->Routhness = 0.1f;
     
 
     mat1->Name = "BlueMat";
     mat1->MatCBIndex = 1;
+    mat1->DiffuseSrvHeapIndex = 0;
     mat1->DiffuseAlbedo = { 0.0f,0.0f,1.0f,1.0f };
     mat1->Routhness = 0.1f;
     
 
     mat2->Name = "GreenMat";
     mat2->MatCBIndex = 2;
+    mat2->DiffuseSrvHeapIndex = 0;
     mat2->DiffuseAlbedo = { 0.0f,1.0f,0.0f,1.0f };
     mat2->Routhness = 0.1f;
     
 
     mat3->Name = "GrayMat";
     mat3->MatCBIndex = 3;
+    mat3->DiffuseSrvHeapIndex = 0;
     mat3->DiffuseAlbedo = { 0.5f,0.5f,0.5f,1.0f };
     mat3->Routhness = 0.5f;
+
+    mat4->Name = "woodCrate";
+    mat4->MatCBIndex = 4;
+    mat4->DiffuseSrvHeapIndex = 0;
+    mat4->DiffuseAlbedo = { 1.0f,1.0f,1.0f,1.0f };
+    mat4->Routhness = 0.2f;
 
     mMaterials["RedMat"] = std::move(mat);
     mMaterials["BlueMat"] = std::move(mat1);
     mMaterials["GreenMat"] = std::move(mat2);
     mMaterials["GrayMat"] = std::move(mat3);
-    
+    mMaterials["woodCrate"] = std::move(mat4);
 }
 
 void MultiGeo::BuildShapeGeometry() {
 
     GeometryGenerator geoGen;
     GeometryGenerator::MeshData geoData[4];
-    geoData[0] = geoGen.CreateBox(1.5f, 0.5f, 1.5f, 3);
+    geoData[0] = geoGen.CreateBox(1.0f, 1.0f, 1.0f, 3);
     geoData[1] = geoGen.CreateGrid(20.0f, 30.0f, 60, 40);
     geoData[2] = geoGen.CreateSphere(0.5f, 20, 20);
     geoData[3] = geoGen.CreateCylinder(0.5f, 0.3f, 3.0f, 20, 20);
-
 
     // 合并 顶点/索引缓冲区
     UINT pVertexOffset[4] = {0};
@@ -218,6 +237,7 @@ void MultiGeo::BuildShapeGeometry() {
             
             vertices[k].Pos = geoData[i].Vertices[j].Position;
             vertices[k].Normal = geoData[i].Vertices[j].Normal;
+            vertices[k].TexC = geoData[i].Vertices[j].TexC;
         }
     }
 
@@ -260,12 +280,12 @@ void MultiGeo::BuildRenderItems(){
 
     
     auto boxRitem = std::make_unique<RenderItem>();
-    DirectX::XMStoreFloat4x4(&boxRitem->World,
-        DirectX::XMMatrixScaling(2.0f, 2.0f, 2.0f) * DirectX::XMMatrixTranslation(0.0f, 0.5f, 0.0f));
+    //DirectX::XMStoreFloat4x4(&boxRitem->World,
+    //    DirectX::XMMatrixTranslation(0.0f, 1.5f, 0.0f));
 
     boxRitem->ObjectCBIndex = 0;
     boxRitem->Geo = mGeometries["shapeGeo"].get();
-    boxRitem->Mat = mMaterials["RedMat"].get();
+    boxRitem->Mat = mMaterials["woodCrate"].get();
     boxRitem->IndexCount = boxRitem->Geo->DrawArgs[0].IndexCount;
     boxRitem->primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
     boxRitem->StartIndexLocation = boxRitem->Geo->DrawArgs[0].StartIndexLocation;
@@ -273,72 +293,72 @@ void MultiGeo::BuildRenderItems(){
 
     mAllRitems.push_back(std::move(boxRitem));
 
-    auto gridRitem = std::make_unique<RenderItem>();
-    gridRitem->World = MathHelper::Identity4x4();
-    gridRitem->ObjectCBIndex = 1;
-    gridRitem->Mat = mMaterials["GrayMat"].get();
-    gridRitem->Geo = mGeometries["shapeGeo"].get();
-    gridRitem->primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-    gridRitem->IndexCount = gridRitem->Geo->DrawArgs[1].IndexCount;
-    gridRitem->StartIndexLocation = gridRitem->Geo->DrawArgs[1].StartIndexLocation;
-    gridRitem->BaseVertexLocation = gridRitem->Geo->DrawArgs[1].BaseVertexLocation;
-    mAllRitems.push_back(std::move(gridRitem));
+    //auto gridRitem = std::make_unique<RenderItem>();
+    //gridRitem->World = MathHelper::Identity4x4();
+    //gridRitem->ObjectCBIndex = 1;
+    //gridRitem->Mat = mMaterials["GrayMat"].get();
+    //gridRitem->Geo = mGeometries["shapeGeo"].get();
+    //gridRitem->primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+    //gridRitem->IndexCount = gridRitem->Geo->DrawArgs[1].IndexCount;
+    //gridRitem->StartIndexLocation = gridRitem->Geo->DrawArgs[1].StartIndexLocation;
+    //gridRitem->BaseVertexLocation = gridRitem->Geo->DrawArgs[1].BaseVertexLocation;
+    //mAllRitems.push_back(std::move(gridRitem));
 
-    UINT objCBIndex = 2;
-    for (int i = 0; i < 5; ++i)
-    {
-        auto leftCylRitem = std::make_unique<RenderItem>();
-        auto rightCylRitem = std::make_unique<RenderItem>();
-        auto leftSphereRitem = std::make_unique<RenderItem>();
-        auto rightSphereRitem = std::make_unique<RenderItem>();
+    //UINT objCBIndex = 2;
+    //for (int i = 0; i < 5; ++i)
+    //{
+    //    auto leftCylRitem = std::make_unique<RenderItem>();
+    //    auto rightCylRitem = std::make_unique<RenderItem>();
+    //    auto leftSphereRitem = std::make_unique<RenderItem>();
+    //    auto rightSphereRitem = std::make_unique<RenderItem>();
 
-        DirectX::XMMATRIX leftCylWorld = DirectX::XMMatrixTranslation(-5.0f, 1.5f, -10.0f + i * 5.0f);
-        DirectX::XMMATRIX rightCylWorld = DirectX::XMMatrixTranslation(+5.0f, 1.5f, -10.0f + i * 5.0f);
+    //    DirectX::XMMATRIX leftCylWorld = DirectX::XMMatrixTranslation(-5.0f, 1.5f, -10.0f + i * 5.0f);
+    //    DirectX::XMMATRIX rightCylWorld = DirectX::XMMatrixTranslation(+5.0f, 1.5f, -10.0f + i * 5.0f);
 
-        DirectX::XMMATRIX leftSphereWorld = DirectX::XMMatrixTranslation(-5.0f, 3.5f, -10.0f + i * 5.0f);
-        DirectX::XMMATRIX rightSphereWorld = DirectX::XMMatrixTranslation(+5.0f, 3.5f, -10.0f + i * 5.0f);
+    //    DirectX::XMMATRIX leftSphereWorld = DirectX::XMMatrixTranslation(-5.0f, 3.5f, -10.0f + i * 5.0f);
+    //    DirectX::XMMATRIX rightSphereWorld = DirectX::XMMatrixTranslation(+5.0f, 3.5f, -10.0f + i * 5.0f);
 
-        XMStoreFloat4x4(&leftCylRitem->World, rightCylWorld);
-        leftCylRitem->ObjectCBIndex = objCBIndex++;
-        leftCylRitem->Mat = mMaterials["BlueMat"].get();
-        leftCylRitem->Geo = mGeometries["shapeGeo"].get();
-        leftCylRitem->primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-        leftCylRitem->IndexCount = leftCylRitem->Geo->DrawArgs[3].IndexCount;
-        leftCylRitem->StartIndexLocation = leftCylRitem->Geo->DrawArgs[3].StartIndexLocation;
-        leftCylRitem->BaseVertexLocation = leftCylRitem->Geo->DrawArgs[3].BaseVertexLocation;
+    //    XMStoreFloat4x4(&leftCylRitem->World, rightCylWorld);
+    //    leftCylRitem->ObjectCBIndex = objCBIndex++;
+    //    leftCylRitem->Mat = mMaterials["BlueMat"].get();
+    //    leftCylRitem->Geo = mGeometries["shapeGeo"].get();
+    //    leftCylRitem->primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+    //    leftCylRitem->IndexCount = leftCylRitem->Geo->DrawArgs[3].IndexCount;
+    //    leftCylRitem->StartIndexLocation = leftCylRitem->Geo->DrawArgs[3].StartIndexLocation;
+    //    leftCylRitem->BaseVertexLocation = leftCylRitem->Geo->DrawArgs[3].BaseVertexLocation;
 
-        XMStoreFloat4x4(&rightCylRitem->World, leftCylWorld);
-        rightCylRitem->ObjectCBIndex = objCBIndex++;
-        rightCylRitem->Mat = mMaterials["BlueMat"].get();
-        rightCylRitem->Geo = mGeometries["shapeGeo"].get();
-        rightCylRitem->primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-        rightCylRitem->IndexCount = rightCylRitem->Geo->DrawArgs[3].IndexCount;
-        rightCylRitem->StartIndexLocation = rightCylRitem->Geo->DrawArgs[3].StartIndexLocation;
-        rightCylRitem->BaseVertexLocation = rightCylRitem->Geo->DrawArgs[3].BaseVertexLocation;
+    //    XMStoreFloat4x4(&rightCylRitem->World, leftCylWorld);
+    //    rightCylRitem->ObjectCBIndex = objCBIndex++;
+    //    rightCylRitem->Mat = mMaterials["BlueMat"].get();
+    //    rightCylRitem->Geo = mGeometries["shapeGeo"].get();
+    //    rightCylRitem->primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+    //    rightCylRitem->IndexCount = rightCylRitem->Geo->DrawArgs[3].IndexCount;
+    //    rightCylRitem->StartIndexLocation = rightCylRitem->Geo->DrawArgs[3].StartIndexLocation;
+    //    rightCylRitem->BaseVertexLocation = rightCylRitem->Geo->DrawArgs[3].BaseVertexLocation;
 
-        XMStoreFloat4x4(&leftSphereRitem->World, leftSphereWorld);
-        leftSphereRitem->ObjectCBIndex = objCBIndex++;
-        leftSphereRitem->Mat = mMaterials["GreenMat"].get();
-        leftSphereRitem->Geo = mGeometries["shapeGeo"].get();
-        leftSphereRitem->primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-        leftSphereRitem->IndexCount = leftSphereRitem->Geo->DrawArgs[2].IndexCount;
-        leftSphereRitem->StartIndexLocation = leftSphereRitem->Geo->DrawArgs[2].StartIndexLocation;
-        leftSphereRitem->BaseVertexLocation = leftSphereRitem->Geo->DrawArgs[2].BaseVertexLocation;
+    //    XMStoreFloat4x4(&leftSphereRitem->World, leftSphereWorld);
+    //    leftSphereRitem->ObjectCBIndex = objCBIndex++;
+    //    leftSphereRitem->Mat = mMaterials["GreenMat"].get();
+    //    leftSphereRitem->Geo = mGeometries["shapeGeo"].get();
+    //    leftSphereRitem->primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+    //    leftSphereRitem->IndexCount = leftSphereRitem->Geo->DrawArgs[2].IndexCount;
+    //    leftSphereRitem->StartIndexLocation = leftSphereRitem->Geo->DrawArgs[2].StartIndexLocation;
+    //    leftSphereRitem->BaseVertexLocation = leftSphereRitem->Geo->DrawArgs[2].BaseVertexLocation;
 
-        XMStoreFloat4x4(&rightSphereRitem->World, rightSphereWorld);
-        rightSphereRitem->ObjectCBIndex = objCBIndex++;
-        rightSphereRitem->Mat = mMaterials["GreenMat"].get();
-        rightSphereRitem->Geo = mGeometries["shapeGeo"].get();
-        rightSphereRitem->primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-        rightSphereRitem->IndexCount = rightSphereRitem->Geo->DrawArgs[2].IndexCount;
-        rightSphereRitem->StartIndexLocation = rightSphereRitem->Geo->DrawArgs[2].StartIndexLocation;
-        rightSphereRitem->BaseVertexLocation = rightSphereRitem->Geo->DrawArgs[2].BaseVertexLocation;
+    //    XMStoreFloat4x4(&rightSphereRitem->World, rightSphereWorld);
+    //    rightSphereRitem->ObjectCBIndex = objCBIndex++;
+    //    rightSphereRitem->Mat = mMaterials["GreenMat"].get();
+    //    rightSphereRitem->Geo = mGeometries["shapeGeo"].get();
+    //    rightSphereRitem->primitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+    //    rightSphereRitem->IndexCount = rightSphereRitem->Geo->DrawArgs[2].IndexCount;
+    //    rightSphereRitem->StartIndexLocation = rightSphereRitem->Geo->DrawArgs[2].StartIndexLocation;
+    //    rightSphereRitem->BaseVertexLocation = rightSphereRitem->Geo->DrawArgs[2].BaseVertexLocation;
 
-        mAllRitems.push_back(std::move(leftCylRitem));
-        mAllRitems.push_back(std::move(rightCylRitem));
-        mAllRitems.push_back(std::move(leftSphereRitem));
-        mAllRitems.push_back(std::move(rightSphereRitem));
-    }
+    //    mAllRitems.push_back(std::move(leftCylRitem));
+    //    mAllRitems.push_back(std::move(rightCylRitem));
+    //    mAllRitems.push_back(std::move(leftSphereRitem));
+    //    mAllRitems.push_back(std::move(rightSphereRitem));
+    //}
 
     for (auto& e : mAllRitems) {
         mOpaqueRitems.push_back(e.get());
@@ -407,12 +427,42 @@ void MultiGeo::BuildCBufferView() {
 
 }
 
+void MultiGeo::BuildShaderView() {
+    CD3DX12_CPU_DESCRIPTOR_HANDLE handle(mSrvHeap->GetCPUDescriptorHandleForHeapStart());
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
+    srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    srvDesc.Format = mTextures["crate"]->Resource->GetDesc().Format;
+    srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+    srvDesc.Texture2D.MostDetailedMip = 0;
+    srvDesc.Texture2D.MipLevels = mTextures["crate"]->Resource->GetDesc().MipLevels;
+    srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+    
+    //md3dDevice->CreateShaderResourceView(mTextures["crate"]->Resource.Get(), &srvDesc, handle);
+    DirectX::CreateShaderResourceView(md3dDevice.Get(), mTextures["crate"]->Resource.Get(), handle);
+    /*CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(mSrvHeap->GetCPUDescriptorHandleForHeapStart());
+
+    auto woodCrateTex = mTextures["crate"]->Resource;
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+    srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    srvDesc.Format = woodCrateTex->GetDesc().Format;
+    srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+    srvDesc.Texture2D.MostDetailedMip = 0;
+    srvDesc.Texture2D.MipLevels = woodCrateTex->GetDesc().MipLevels;
+    srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+
+    md3dDevice->CreateShaderResourceView(woodCrateTex.Get(), &srvDesc, hDescriptor);*/
+}
+
 void MultiGeo::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderItem*>& ritems) {
 
     UINT objByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
     UINT matByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(MaterialConstants));
 
+    auto objCB = mCurrentFrameResource->ObjectCB->Get();
     auto matCB = mCurrentFrameResource->MatCB->Get();
+
     for (auto e : ritems)
     {
         D3D12_VERTEX_BUFFER_VIEW vbv = e->Geo->VertexBufferView();
@@ -421,14 +471,20 @@ void MultiGeo::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::ve
         cmdList->IASetIndexBuffer(&ibv);
         cmdList->IASetPrimitiveTopology(e->primitiveType);
 
-        UINT cbvIndex = mCurrentFrameResourceIndex * (UINT)mOpaqueRitems.size() + e->ObjectCBIndex;
+        /*UINT cbvIndex = mCurrentFrameResourceIndex * (UINT)mOpaqueRitems.size() + e->ObjectCBIndex;
         auto cbvHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(mCbvHeap->GetGPUDescriptorHandleForHeapStart());
-        cbvHandle.Offset(cbvIndex, mCbvUavDescriptorSize);
+        cbvHandle.Offset(cbvIndex, mCbvUavDescriptorSize);*/
+        
+        auto diffuseSrvHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(mSrvHeap->GetGPUDescriptorHandleForHeapStart());
+        diffuseSrvHandle.Offset(e->Mat->DiffuseSrvHeapIndex, mCbvUavDescriptorSize);
 
+        D3D12_GPU_VIRTUAL_ADDRESS objAddress = objCB->GetGPUVirtualAddress() + e->ObjectCBIndex * matByteSize;
         D3D12_GPU_VIRTUAL_ADDRESS matAddress = matCB->GetGPUVirtualAddress() + e->Mat->MatCBIndex * matByteSize;
-
-        cmdList->SetGraphicsRootDescriptorTable(0, cbvHandle);
-        cmdList->SetGraphicsRootConstantBufferView(2, matAddress);
+        
+        cmdList->SetGraphicsRootDescriptorTable(0, diffuseSrvHandle);
+        /*cmdList->SetGraphicsRootDescriptorTable(2, cbvHandle);*/
+        cmdList->SetGraphicsRootConstantBufferView(2, objAddress);
+        cmdList->SetGraphicsRootConstantBufferView(3, matAddress);
         cmdList->DrawIndexedInstanced(e->IndexCount, 1, e->StartIndexLocation, e->BaseVertexLocation, 0);
 
     }
@@ -439,31 +495,43 @@ void MultiGeo::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::ve
 void MultiGeo::BuildRootSigantureAndDescriptorTable() {
 
     // 以描述符表作为根参数
-    CD3DX12_DESCRIPTOR_RANGE cbvTable[2];
+    CD3DX12_DESCRIPTOR_RANGE cbvTable[3];
     cbvTable[0].Init(
+        D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+    /*cbvTable[1].Init(
         D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
-    cbvTable[1].Init(
-        D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1);
-
+    cbvTable[2].Init(
+        D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1);*/
     // 根参数
-    CD3DX12_ROOT_PARAMETER slotRootParameter[3];
+    CD3DX12_ROOT_PARAMETER slotRootParameter[4];
 
     slotRootParameter[0].InitAsDescriptorTable(
         1,
-        &cbvTable[0]
+        &cbvTable[0],
+        D3D12_SHADER_VISIBILITY_PIXEL
     );
-    slotRootParameter[1].InitAsDescriptorTable(
+    /*slotRootParameter[1].InitAsDescriptorTable(
         1,
         &cbvTable[1]
     );
-    slotRootParameter[2].InitAsConstantBufferView(2);
+    slotRootParameter[2].InitAsDescriptorTable(
+        1,
+        &cbvTable[2]
+    );*/
+    slotRootParameter[1].InitAsConstantBufferView(0);
+    slotRootParameter[2].InitAsConstantBufferView(1);
+    slotRootParameter[3].InitAsConstantBufferView(2);
+
+    auto staticSamplers = GetStaticSamplers();
 
     // 根签名的描述
     CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(
-        3, 
+        4, 
         slotRootParameter, 
-        0, nullptr, 
+        (UINT)staticSamplers.size(), staticSamplers.data(),
         D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+
 
     Microsoft::WRL::ComPtr<ID3DBlob> serializedRootSig = nullptr;
     Microsoft::WRL::ComPtr<ID3DBlob> errorBlob = nullptr;
@@ -485,13 +553,14 @@ void MultiGeo::BuildRootSigantureAndDescriptorTable() {
 }
 
 void MultiGeo::BuildShadersAndInputLayout() {
-    mvsByteCode = d3dUtil::CompileShader(L"Shaders\\LightMultiGeo.hlsl", nullptr, "VS", "vs_5_0");
-    mpsByteCode = d3dUtil::CompileShader(L"Shaders\\LightMultiGeo.hlsl", nullptr, "PS", "ps_5_0");
+    mvsByteCode = d3dUtil::CompileShader(L"Shaders\\LightMultiGeo_TextureSampler.hlsl", nullptr, "VS", "vs_5_0");
+    mpsByteCode = d3dUtil::CompileShader(L"Shaders\\LightMultiGeo_TextureSampler.hlsl", nullptr, "PS", "ps_5_0");
 
     mInputLayout =
     {
         { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+        { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
     };
 }
 
@@ -540,13 +609,20 @@ void MultiGeo::BuildDescriptorHeaps()
     // 为每帧的渲染过程增加一个CBV
     UINT numDesc = (objCount + 1) * gNumFrameResource;
 
-    D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc;
+    D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc = {};
     cbvHeapDesc.NumDescriptors = numDesc;
     cbvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
     cbvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
     cbvHeapDesc.NodeMask = 0;
     ThrowIfFailed(md3dDevice->CreateDescriptorHeap(&cbvHeapDesc,
         IID_PPV_ARGS(&mCbvHeap)));
+
+    D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
+    srvHeapDesc.NumDescriptors = 1;
+    srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+    srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+    ThrowIfFailed(md3dDevice->CreateDescriptorHeap(&srvHeapDesc,
+        IID_PPV_ARGS(&mSrvHeap)));
 
 }
 
@@ -576,9 +652,11 @@ void MultiGeo::UpdateObjectCBs()
         if (e->NumFramesDirty > 0)
         {
             DirectX::XMMATRIX world = XMLoadFloat4x4(&e->World);
+            DirectX::XMMATRIX texTransform = DirectX::XMLoadFloat4x4(&e->TexTransform);
 
             ObjectConstants objConstants;
             XMStoreFloat4x4(&objConstants.World, DirectX::XMMatrixTranspose(world));
+            XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(texTransform));
 
             currObjectCB->CopyData(e->ObjectCBIndex, objConstants);
 
@@ -650,11 +728,88 @@ void MultiGeo::UpdateMaterials() {
         }
     }
 }
+void MultiGeo::LoadTexture() {
+    DirectX::ResourceUploadBatch resUploadBatch(md3dDevice.Get());
+    auto tex = std::make_unique<Texture>();
+    tex->Name = "crate";
+    tex->Filename = L"Textures/WoodCrate01.dds";
+    resUploadBatch.Begin();
+    HRESULT hr = DirectX::CreateDDSTextureFromFile(md3dDevice.Get(), resUploadBatch, tex->Filename.c_str(), tex->Resource.GetAddressOf());
 
+    ThrowIfFailed(hr);
+    auto uploadResourcesFinished = resUploadBatch.End(mCommandQueue.Get());
+    uploadResourcesFinished.wait();
+
+    //mTextures["crate"] = std::move(tex);
+    //auto woodCrateTex = std::make_unique<Texture>();
+    //woodCrateTex->Name = "crate";
+    //woodCrateTex->Filename = L"Textures/WoodCrate02.dds";
+    //ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(md3dDevice.Get(),
+    //    mCommandList.Get(), woodCrateTex->Filename.c_str(),
+    //    woodCrateTex->Resource, woodCrateTex->UploadHeap));
+
+    mTextures[tex->Name] = std::move(tex);
+}
 void MultiGeo::OnKeyboardInput()
 {
     if (GetAsyncKeyState(VK_F4) & 0x8000)
         mIsWireframe = true;
     else
         mIsWireframe = false;
+}
+std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> MultiGeo::GetStaticSamplers()
+{
+    // Applications usually only need a handful of samplers.  So just define them all up front
+    // and keep them available as part of the root signature.  
+
+    const CD3DX12_STATIC_SAMPLER_DESC pointWrap(
+        0, // shaderRegister
+        D3D12_FILTER_MIN_MAG_MIP_POINT, // filter
+        D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressU
+        D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressV
+        D3D12_TEXTURE_ADDRESS_MODE_WRAP); // addressW
+
+    const CD3DX12_STATIC_SAMPLER_DESC pointClamp(
+        1, // shaderRegister
+        D3D12_FILTER_MIN_MAG_MIP_POINT, // filter
+        D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressU
+        D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressV
+        D3D12_TEXTURE_ADDRESS_MODE_CLAMP); // addressW
+
+    const CD3DX12_STATIC_SAMPLER_DESC linearWrap(
+        2, // shaderRegister
+        D3D12_FILTER_MIN_MAG_MIP_LINEAR, // filter
+        D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressU
+        D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressV
+        D3D12_TEXTURE_ADDRESS_MODE_WRAP); // addressW
+
+    const CD3DX12_STATIC_SAMPLER_DESC linearClamp(
+        3, // shaderRegister
+        D3D12_FILTER_MIN_MAG_MIP_LINEAR, // filter
+        D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressU
+        D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressV
+        D3D12_TEXTURE_ADDRESS_MODE_CLAMP); // addressW
+
+    const CD3DX12_STATIC_SAMPLER_DESC anisotropicWrap(
+        4, // shaderRegister
+        D3D12_FILTER_ANISOTROPIC, // filter
+        D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressU
+        D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressV
+        D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressW
+        0.0f,                             // mipLODBias
+        8);                               // maxAnisotropy
+
+    const CD3DX12_STATIC_SAMPLER_DESC anisotropicClamp(
+        5, // shaderRegister
+        D3D12_FILTER_ANISOTROPIC, // filter
+        D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressU
+        D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressV
+        D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressW
+        0.0f,                              // mipLODBias
+        8);                                // maxAnisotropy
+
+    return {
+        pointWrap, pointClamp,
+        linearWrap, linearClamp,
+        anisotropicWrap, anisotropicClamp };
 }

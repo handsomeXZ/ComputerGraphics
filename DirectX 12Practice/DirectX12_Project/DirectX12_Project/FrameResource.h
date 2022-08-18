@@ -8,6 +8,7 @@ struct Vertex
     DirectX::XMFLOAT3 Pos;
     //DirectX::XMFLOAT4 Color; ÓÉ²ÄÖÊ´úÌæ
     DirectX::XMFLOAT3 Normal;
+    DirectX::XMFLOAT2 TexC;
 };
 struct PassConstants {
     DirectX::XMFLOAT4X4 View = MathHelper::Identity4x4();

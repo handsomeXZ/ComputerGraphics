@@ -11,6 +11,7 @@ struct RenderItem {
     RenderItem() = default;
 
     DirectX::XMFLOAT4X4 World = MathHelper::Identity4x4();
+    DirectX::XMFLOAT4X4 TexTransform = MathHelper::Identity4x4();
 
     int NumFramesDirty = gNumFrameResource;
 
@@ -52,16 +53,20 @@ private:
     void UpdateMainPassCB();
     void UpdateMaterials();
 
+    void LoadTexture();
     void BuildMaterials();
-    void BuildCBufferView(); 
     void BuildRootSigantureAndDescriptorTable();
     void BuildDescriptorHeaps();
+    void BuildCBufferView();
+    void BuildShaderView();
     void BuildShadersAndInputLayout();
     void BuildShapeGeometry();
     void BuildPSO();
     void BuildFrameResources();
     void BuildRenderItems();
     void DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderItem*>& ritems);
+
+    std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> GetStaticSamplers();
 
 private:
 
@@ -81,9 +86,9 @@ private:
     DirectX::XMFLOAT4X4 mProj = MathHelper::Identity4x4();
     DirectX::XMFLOAT3 mEyePos = { 0.0f, 0.0f, 0.0f };
 
-    float mTheta = 1.5f * DirectX::XM_PI;
-    float mPhi = 0.2f * DirectX::XM_PI;
-    float mRadius = 15.0f;
+    float mTheta = 1.3f * DirectX::XM_PI;
+    float mPhi = 0.4f * DirectX::XM_PI;
+    float mRadius = 2.5f;
     
 
 
@@ -97,6 +102,10 @@ private:
     std::vector<std::unique_ptr<RenderItem>> mAllRitems;
     std::vector<RenderItem*> mOpaqueRitems;
     std::vector<RenderItem*> mTransparentRitems;
+
+    // Texture
+    std::unordered_map<std::string, std::unique_ptr<Texture>> mTextures;
+    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mSrvHeap = nullptr;
 
 };
 

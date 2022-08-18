@@ -15,6 +15,7 @@
 #include "vector"
 #include "DirectXCollision.h"
 #include "unordered_map"
+#include "array"
 
 #define MAX_LIGHTS 10
 
@@ -149,6 +150,8 @@ struct Material {
 
     int MatCBIndex = -1;
 
+    int DiffuseSrvHeapIndex = -1;
+
     int NumFramesDirty = gNumFrameResource;
 
     DirectX::XMFLOAT4 DiffuseAlbedo = { 1.0f,1.0f,1.0f,1.0f };
@@ -172,7 +175,15 @@ struct Light {
     DirectX::XMFLOAT3 Position = { 0.0f,0.0f,0.0f };    // 仅供点光源、聚光灯使用
     float SpotPower = 64.0f;    // 仅供点光源使用
 };
+struct Texture
+{
+    std::string Name;
 
+    std::wstring Filename;
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> Resource = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> UploadHeap = nullptr;
+};
 #ifndef ThrowIfFailed
 #define ThrowIfFailed(x)                                              \
 {                                                                     \

@@ -21,6 +21,12 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Example\MultiGeo.h">
+      <Filter>头文件\Example</Filter>
+    </ClInclude>
+    <ClInclude Include="Example\Box.h">
+      <Filter>头文件\Example</Filter>
+    </ClInclude>
     <ClInclude Include="d3dapp.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -30,23 +36,20 @@
     <ClInclude Include="d3dx12.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="MathHelper.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="UploadBuffer.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="Example\MultiGeo.h">
-      <Filter>头文件\Example</Filter>
-    </ClInclude>
     <ClInclude Include="FrameResource.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="GeometryGenerator.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Example\Box.h">
-      <Filter>头文件\Example</Filter>
+    <ClInclude Include="MathHelper.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="UploadBuffer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="test\DDSTextureLoader.h">
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -73,6 +76,9 @@
     </ClCompile>
     <ClCompile Include="Example\Box.cpp">
       <Filter>源文件\Example</Filter>
+    </ClCompile>
+    <ClCompile Include="test\DDSTextureLoader.cpp">
+      <Filter>头文件</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
