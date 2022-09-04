@@ -204,7 +204,7 @@ void D3DApp::CreateSwapChain() {
 	swapChaindesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 	swapChaindesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
-	mdxgiFactory->CreateSwapChain(mCommandQueue.Get(), &swapChaindesc, mSwapChain.GetAddressOf());
+	ThrowIfFailed(mdxgiFactory->CreateSwapChain(mCommandQueue.Get(), &swapChaindesc, mSwapChain.GetAddressOf()));
 
 }
 ID3D12Resource* D3DApp::CurrentBackBuffer()const
@@ -480,6 +480,9 @@ LRESULT D3DApp::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 void D3DApp::Modify4xMsaaState(bool prevstate) {
 	m4xMsaaState = !prevstate;
+
+	CreateSwapChain();
+	OnResize();
 }
 float D3DApp::AspectRatio()const
 {

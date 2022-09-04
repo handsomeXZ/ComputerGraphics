@@ -1,4 +1,2 @@
-﻿  MultiGeo.cpp
-E:\Art\ComputerGraphics\computer graphics study\DirectX 12Practice\DirectX12_Project\DirectX12_Project\Example\MultiGeo.cpp(227,55): warning C4267: “+=”: 从“size_t”转换到“UINT”，可能丢失数据
-E:\Art\ComputerGraphics\computer graphics study\DirectX 12Practice\DirectX12_Project\DirectX12_Project\Example\MultiGeo.cpp(383,27): warning C4018: “<”: 有符号/无符号不匹配
+﻿  d3dapp.cpp
   DirectX12_Project.vcxproj -> E:\Art\ComputerGraphics\computer graphics study\DirectX 12Practice\DirectX12_Project\x64\Debug\DirectX12_Project.exe
